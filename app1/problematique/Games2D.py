@@ -4,6 +4,7 @@ import pygame
 from Player import *
 from Maze import *
 from Constants import *
+from astar import astar
 
 
 class App:
@@ -27,7 +28,9 @@ class App:
 
     def on_init(self):
         pygame.init()
-        self._display_surf = pygame.display.set_mode((self.windowWidth, self.windowHeight), pygame.HWSURFACE)
+        self._display_surf = pygame.display.set_mode(
+            (self.windowWidth, self.windowHeight), pygame.HWSURFACE
+        )
         self._clock = pygame.time.Clock()
         pygame.display.set_caption("Dungeon Crawler")
         pygame.time.set_timer(pygame.USEREVENT, 10)
@@ -35,9 +38,15 @@ class App:
         self.maze.make_maze_wall_list()
         self.maze.make_maze_item_lists()
         self._image_surf = pygame.image.load("assets/kickboxeuse.png")
-        self.player.set_position(1.5 * self.maze.tile_size_x, 0.5 * self.maze.tile_size_y)
-        self.player.set_size(PLAYER_SIZE*self.maze.tile_size_x, PLAYER_SIZE*self.maze.tile_size_x)
-        self._image_surf = pygame.transform.scale(self._image_surf, self.player.get_size())
+        self.player.set_position(
+            1.5 * self.maze.tile_size_x, 0.5 * self.maze.tile_size_y
+        )
+        self.player.set_size(
+            PLAYER_SIZE * self.maze.tile_size_x, PLAYER_SIZE * self.maze.tile_size_x
+        )
+        self._image_surf = pygame.transform.scale(
+            self._image_surf, self.player.get_size()
+        )
         self._block_surf = pygame.image.load("assets/wall.png")
 
     def on_keyboard_input(self, keys):
@@ -55,7 +64,9 @@ class App:
 
         # Utility functions for AI
         if keys[K_p]:
-            self.maze.make_perception_list(self.player, self._display_surf)
+            print("perception:")
+            print(self.maze.make_perception_list(self.player, self._display_surf))
+            print("")
             # returns a list of 4 lists of pygame.rect inside the perception radius
             # the 4 lists are [wall_list, obstacle_list, item_list, monster_list]
             # item_list includes coins and treasure
@@ -66,22 +77,25 @@ class App:
             # returns the number of rounds you win against the monster
             # you need to win all four rounds to beat it
 
-        if (keys[K_ESCAPE]):
+        if keys[K_ESCAPE]:
             self._running = False
 
     # FONCTION À Ajuster selon votre format d'instruction
     def on_AI_input(self, instruction):
-        if instruction == 'RIGHT':
-            self.move_player_right()
+        # print("instruction", instruction)
+        # "instruction" est une liste de 4 éléments [up, right, down, left]
 
-        if instruction == 'LEFT':
-            self.move_player_left()
-
-        if instruction == 'UP':
+        if instruction[0]:
             self.move_player_up()
 
-        if instruction == 'DOWN':
+        if instruction[1]:
+            self.move_player_right()
+
+        if instruction[2]:
             self.move_player_down()
+
+        if instruction[3]:
+            self.move_player_left()
 
     def move_player_right(self):
         self.player.moveRight()
@@ -153,6 +167,16 @@ class App:
 
     def on_render(self):
         self.maze_render()
+        pygame.draw.rect(
+            self._display_surf,
+            (200, 100, 0),
+            (
+                self.player.x,
+                self.player.y,
+                self.player.size_x,
+                self.player.size_y,
+            ),
+        )
         self._display_surf.blit(self._image_surf, (self.player.x, self.player.y))
         pygame.display.flip()
 
@@ -176,6 +200,9 @@ class App:
     def on_execute(self):
         self.on_init()
 
+        path = do_planification()
+        do_genetics()
+
         while self._running:
             self._clock.tick(GAME_CLOCK)
             for event in pygame.event.get():
@@ -186,7 +213,9 @@ class App:
             pygame.event.pump()
             keys = pygame.key.get_pressed()
             self.on_keyboard_input(keys)
-            # self.on_AI_input(instruction)
+            check_for_incoming_monster_to_set_stats()
+            key_to_press_for_AI = get_movement_for_ai(path, self.player.get_position())
+            self.on_AI_input(key_to_press_for_AI)
             if self.on_coin_collision():
                 self.score += 1
             if self.on_treasure_collision():
@@ -216,3 +245,83 @@ class App:
             self.on_death_render()
 
         self.on_cleanup()
+
+
+def get_movement_for_ai(path, player_position):
+    player_position_cell_i_j = (player_position[0] // 50, player_position[1] // 50)
+    current_step = path.index(player_position_cell_i_j)
+    print("current_step", current_step)
+    next_step = path[current_step + 1]
+    next_step_position = (next_step[0] * 50 + 25, next_step[1] * 50 + 25)
+
+    instructions = [0, 0, 0, 0]  # up, right, down, left
+
+    if next_step_position[0] > player_position[0] + 5:
+        instructions[1] = 1
+    elif next_step_position[0] < player_position[0] + 5:
+        instructions[3] = 1
+    if next_step_position[1] > player_position[1] + 5:
+        instructions[2] = 1
+    elif next_step_position[1] < player_position[1] + 5:
+        instructions[0] = 1
+
+    return instructions
+
+
+def do_planification():
+
+    # planif = [
+    #     (1, 0),
+    #     (1, 1),
+    #     (1, 2),
+    #     (1, 3),
+    #     (1, 4),
+    #     (1, 5),
+    #     (1, 6),
+    #     (1, 7),
+    #     (2, 7),
+    #     (3, 7),
+    #     (4, 7),
+    #     (4, 8),
+    #     (4, 9),
+    #     (5, 9),
+    #     (6, 9),
+    #     (7, 9),
+    #     (8, 9),
+    #     (9, 9),
+    #     (9, 10),
+    #     (9, 11),
+    #     (10, 11),
+    #     (11, 11),
+    #     (12, 11),
+    #     (13, 11),
+    #     (13, 12),
+    #     (13, 13),
+    #     (14, 13),
+    #     (15, 13),
+    #     (16, 13),
+    #     (17, 13),
+    #     (17, 14),
+    #     (18, 14),
+    #     (19, 14),
+    #     (20, 14),
+    #     (21, 14),
+    #     (22, 14),
+    #     (22, 15),
+    # ]
+
+    # A-star
+    starting_positon = (1, 0)
+    ending_position = (22, 15)
+
+    path = astar(starting_positon, ending_position)
+    print("path", path)
+    return path
+
+
+def do_genetics():
+    pass
+
+
+def check_for_incoming_monster_to_set_stats():
+    pass
