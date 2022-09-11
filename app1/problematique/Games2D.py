@@ -4,7 +4,9 @@ import pygame
 from Player import *
 from Maze import *
 from Constants import *
+from genetics_main import train_genetics
 from astar import astar
+import numpy as np
 
 
 class App:
@@ -72,8 +74,9 @@ class App:
             # item_list includes coins and treasure
 
         if keys[K_m]:
-            for monster in self.maze.monsterList:
-                print(monster.mock_fight(self.player))
+            print("mock fight...:")
+            for i, monster in enumerate(self.maze.monsterList):
+                print("monster:", i, monster.mock_fight(self.player))
             # returns the number of rounds you win against the monster
             # you need to win all four rounds to beat it
 
@@ -201,7 +204,10 @@ class App:
         self.on_init()
 
         path = do_planification()
-        do_genetics()
+        best_attributes = do_genetics(self.player, self.maze.monsterList)
+        original_monster_list = []
+        for monster in self.maze.monsterList:
+            original_monster_list.append(monster)
 
         while self._running:
             self._clock.tick(GAME_CLOCK)
@@ -213,9 +219,13 @@ class App:
             pygame.event.pump()
             keys = pygame.key.get_pressed()
             self.on_keyboard_input(keys)
-            check_for_incoming_monster_to_set_stats()
-            key_to_press_for_AI = get_movement_for_ai(path, self.player.get_position())
-            self.on_AI_input(key_to_press_for_AI)
+            check_for_incoming_monster_to_set_stats(
+                player=self.player,
+                monster_list=original_monster_list,
+                best_attributes=best_attributes,
+            )
+            # key_to_press_for_AI = get_movement_for_ai(path, self.player.get_position())
+            # self.on_AI_input(key_to_press_for_AI) # A décommenter pour utiliser l'IA
             if self.on_coin_collision():
                 self.score += 1
             if self.on_treasure_collision():
@@ -319,9 +329,112 @@ def do_planification():
     return path
 
 
-def do_genetics():
-    pass
+def check_for_incoming_monster_to_set_stats(player, monster_list, best_attributes):
+    min_distance = 1000000000
+    monster_index = 0
+    # print("monster_list", monster_list)
+    for i, monster in enumerate(monster_list):
+        monster_x = monster.rect.x
+        monster_y = monster.rect.y
+        player_x = player.x
+        player_y = player.y
+        # print(
+        #     "player_x",
+        #     player_x,
+        #     "player_y",
+        #     player_y,
+        #     "monster_x",
+        #     monster_x,
+        #     "monster_y",
+        #     monster_y,
+        # )
+        distance = (monster_x - player_x) ** 2 + (monster_y - player_y) ** 2
+        if distance < min_distance:
+            min_distance = distance
+            monster_index = i
+    player.set_attributes(best_attributes[monster_index])
 
 
-def check_for_incoming_monster_to_set_stats():
-    pass
+best_of_the_best = []
+
+
+def genetics_fitness_function(player, monster, attributes):
+    print("attributes", attributes.shape)
+    fitness = np.zeros((attributes.shape[0],))
+    for i in range(attributes.shape[0]):
+        attributes_i = attributes[i, :]
+        player.set_attributes(attributes_i)
+        results = monster.mock_fight(player)
+        # print("results", results)
+        fitness[i] = results[1]
+        if results[0] == 4:
+            print("win")
+            print("winning attributes", attributes_i)
+            global best_of_the_best
+            best_of_the_best = attributes_i
+    print("fitness", fitness.shape)
+    return fitness
+
+
+def quick_genetics(player, monster, attributes):
+    print("attributes", attributes.shape)
+    fitness = np.zeros((attributes.shape[0],))
+    for i in range(attributes.shape[0]):
+        attributes_i = attributes[i, :]
+        player.set_attributes(attributes_i)
+        results = monster.mock_fight(player)
+        # print("results", results)
+        fitness[i] = results[1]
+        if results[0] == 4:
+            print("win")
+            # print("winning attributes", attributes_i)
+            return attributes_i
+
+
+def do_genetics(player, monsterList):
+    print("training genetics to fight...: \n\n")
+
+    # for i, monster in enumerate(monsterList):
+    # attributes_temp = []
+    # for i in range(NUM_ATTRIBUTES):
+    #     attributes_temp.append(random.randint(0, MAX_ATTRIBUTE))
+    # player.set_attributes(attributes_temp)
+    # results = monster.mock_fight(player)
+    # print("results", results)
+
+    # genetic algorithm
+    # best_attributes = train_genetics(
+    #     lambda attributes: genetics_fitness_function(player, monster, attributes),
+    #     NUM_ATTRIBUTES,
+    #     0,
+    #     MAX_ATTRIBUTE,
+    # )
+
+    pop_size = 1000
+    nb_bits = 64
+    population = np.random.randint(0, 2, (pop_size, NUM_ATTRIBUTES * nb_bits))
+    print("population", population.shape)
+    min_value = 0
+    max_value = MAX_ATTRIBUTE
+    cvalues = np.zeros((pop_size, NUM_ATTRIBUTES))
+    print("cvalues", cvalues.shape)
+    max_binary_value = 2**nb_bits - 1
+
+    for i in range(pop_size):
+        for j in range(NUM_ATTRIBUTES):
+            cvalues[i, j] = min_value + (max_value - min_value) * (
+                np.sum(
+                    population[i, j * nb_bits : (j + 1) * nb_bits]
+                    * 2 ** np.arange(nb_bits)
+                )
+                / max_binary_value
+            )
+
+    best_attributes = []
+    for i, monster in enumerate(monsterList):
+        best_attributes.append(quick_genetics(player, monster, cvalues))
+        player.set_attributes(best_attributes[i])
+        results = monster.mock_fight(player)
+        print("results best_attributes", results)
+
+    return best_attributes

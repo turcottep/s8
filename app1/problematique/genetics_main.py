@@ -35,101 +35,33 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def fitness_function(x, y):
-    # The 2-dimensional function to optimize
-    fitness = (1 - x) ** 2 * np.exp(-(x**2) - (y + 1) ** 2) - (
-        x - x**3 - y**5
-    ) * np.exp(-(x**2) - y**2)
-    print("Fitness : ", fitness.shape)
-    return fitness
-
-
-# Produces the 3D surface plot of the fitness function
-def init_plot():
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    ax.set_title("Function landscape")
-    xymin = -3.0
-    xymax = 3.0
-    x, y = np.meshgrid(np.linspace(xymin, xymax, 100), np.linspace(xymin, xymax, 100))
-    z = fitness_function(x, y)
-
-    ax.plot_surface(
-        x, y, z, cmap=plt.get_cmap("coolwarm"), linewidth=0, antialiased=False
-    )
-
-    e = np.zeros((popsize,))
-    (sp,) = ax.plot(
-        e, e, e, markersize=10, color="k", marker=".", linewidth=0, zorder=10
-    )
-
-    ax.set_xlim(-3, 3)
-    ax.set_ylim(-3, 3)
-    ax.set_zlim(-1, 4)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    # fig.show()
-    return fig, sp
-
-
-# Displays the progress of the fitness over all the generations
-def display_generations(ga_sim):
-    fig = plt.figure()
-    n = np.arange(numGenerations)
-    ax = fig.add_subplot(111)
-    ax.plot(n, ga_sim.maxFitnessRecord, "-r", label="Generation Max")
-    ax.plot(n, ga_sim.overallMaxFitnessRecord, "-b", label="Overall Max")
-    ax.plot(n, ga_sim.avgMaxFitnessRecord, "--k", label="Generation Average")
-    ax.set_title("Fitness value over generations")
-    ax.set_xlabel("Generation")
-    ax.set_ylabel("Fitness value")
-    ax.legend()
-    fig.tight_layout()
-
-    plt.show()
-
-
-if __name__ == "__main__":
+def train_genetics(fitness_function, numparams, min_param_value, max_param_value):
     # Fix random number generator seed for reproducible results
     np.random.seed(0)
 
-    # Enables realtime plotting of landscape and population.
-    # Disabling plotting is much faster!
-    SHOW_LANDSCAPE = True
-
     # The parameters for encoding the population
-    numparams = 2
 
     # TODO: adjust population size and encoding precision
     popsize = 100  # 40
-    nbits = 32  # 16
+    nbits = 64  # 16
     ga_sim = genetic.Genetic(numparams, popsize, nbits)
     ga_sim.init_pop()
     ga_sim.set_fit_fun(fitness_function)
 
-    if SHOW_LANDSCAPE:
-        # Plot function to optimize
-        fig, sp = init_plot()
-
     # TODO: Adjust optimization meta-parameters
-    numGenerations = 15  # 15
-    mutationProb = 0.05  # 0.01
-    crossoverProb = 0.8  # 0.8
-    ga_sim.set_sim_parameters(numGenerations, mutationProb, crossoverProb)
+    numGenerations = 1  # 15
+    mutationProb = 0.01  # 0.01
+    crossoverProb = 0.5  # 0.8
+
+    ga_sim.set_sim_parameters(
+        numGenerations, mutationProb, crossoverProb, min_param_value, max_param_value
+    )
 
     for i in range(ga_sim.num_generations):
 
         ga_sim.decode_individuals()
         ga_sim.eval_fit()
         ga_sim.print_progress()
-
-        if SHOW_LANDSCAPE:
-            # Plot landscape
-            sp.set_data(ga_sim.cvalues[:, 0], ga_sim.cvalues[:, 1])
-            sp.set_3d_properties(ga_sim.fitness)
-            fig.canvas.draw()
-            plt.pause(0.02)
 
         ga_sim.new_gen()
 
@@ -139,4 +71,20 @@ if __name__ == "__main__":
     print(ga_sim.get_best_individual())
     print("#########################")
 
-    display_generations(ga_sim)
+    # # Display fitness over generations
+    # fig = plt.figure()
+    # n = np.arange(numGenerations)
+    # ax = fig.add_subplot(111)
+    # ax.plot(n, ga_sim.maxFitnessRecord, "-r", label="Generation Max")
+    # ax.plot(n, ga_sim.overallMaxFitnessRecord, "-b", label="Overall Max")
+    # ax.plot(n, ga_sim.avgMaxFitnessRecord, "--k", label="Generation Average")
+    # ax.set_title("Fitness value over generations")
+    # ax.set_xlabel("Generation")
+    # ax.set_ylabel("Fitness value")
+    # ax.legend()
+    # fig.tight_layout()
+
+    # plt.show()
+
+    # return best individual
+    return ga_sim.get_best_individual()

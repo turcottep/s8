@@ -77,7 +77,9 @@ class Genetic:
         # Set the fitness function
         self.crossover_modulo = modulo
 
-    def set_sim_parameters(self, num_generations, mutation_prob, crossover_prob):
+    def set_sim_parameters(
+        self, num_generations, mutation_prob, crossover_prob, min_value, max_value
+    ):
         # set the simulation/evolution parameters to execute the optimization
         # initialize the result matrices
         self.num_generations = num_generations
@@ -89,12 +91,13 @@ class Genetic:
         self.overallMaxFitnessRecord = np.zeros((num_generations,))
         self.avgMaxFitnessRecord = np.zeros((num_generations,))
         self.current_gen = 0
+        self.min_value = min_value
+        self.max_value = max_value
 
     def eval_fit(self):
         # Evaluate the fitness function
         # Record the best individual and average of the current generation
-        # WARNING, number of arguments need to be adjusted if fitness function changes
-        self.fitness = self.fit_fun(self.cvalues[:, 0], self.cvalues[:, 1])
+        self.fitness = self.fit_fun(self.cvalues)
         if np.max(self.fitness) > self.bestIndividualFitness:
             self.bestIndividualFitness = np.max(self.fitness)
             self.bestIndividual = self.population[self.fitness == np.max(self.fitness)][
@@ -169,13 +172,11 @@ class Genetic:
         # TODO: decode individuals from binary vectors
         # self.cvalues = np.zeros((self.pop_size, self.num_params))
         max_binary_value = 2**self.nbits - 1
-        value_min = -3
-        value_range = 6
         for i in range(self.pop_size):
             for j in range(self.num_params):
                 self.cvalues[i, j] = (
-                    value_min
-                    + value_range
+                    self.min_value
+                    + (self.max_value - self.min_value)
                     * np.sum(
                         self.population[i, j * self.nbits : (j + 1) * self.nbits]
                         * 2 ** np.arange(self.nbits)

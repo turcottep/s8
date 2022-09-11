@@ -105,7 +105,7 @@ class Maze:
         for i in range(len(self.maze)):
             for j in range(len(self.maze[i])):
                 if i % 2 == 0 and j % 2 == 0:
-                    color_test = (0, 0, 100)
+                    color_test = (150, 150, 150)
                 elif i % 2 == 0 and j % 2 == 1:
                     color_test = (100, 100, 100)
                 elif i % 2 == 1 and j % 2 == 0:

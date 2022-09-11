@@ -8,10 +8,12 @@ class Player:
     y = 0
 
     def __init__(self):
-        self.speed = 1
+        self.speed = 5  # 1 pixel per frame
         self.size_x = 0
         self.size_y = 0
-        self.attributes = [random.randrange(1, MAX_ATTRIBUTE) for i in range(NUM_ATTRIBUTES)]
+        self.attributes = [
+            random.randrange(1, MAX_ATTRIBUTE) for i in range(NUM_ATTRIBUTES)
+        ]
 
     def get_position(self):
         return self.x, self.y
@@ -47,4 +49,3 @@ class Player:
 
     def moveDown(self):
         self.y = self.y + self.speed
-
