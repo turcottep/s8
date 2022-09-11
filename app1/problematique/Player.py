@@ -8,7 +8,7 @@ class Player:
     y = 0
 
     def __init__(self):
-        self.speed = 5  # 1 pixel per frame
+        self.speed = 1  # 1 pixel per frame
         self.size_x = 0
         self.size_y = 0
         self.attributes = [
