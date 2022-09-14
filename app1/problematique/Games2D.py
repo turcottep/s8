@@ -183,17 +183,17 @@ class App:
     def on_render(self, path):
         self.maze_render()
 
-        for historical_player in self.historical_player_path:
-            pygame.draw.rect(
-                self._display_surf,
-                (200, 100, 0),
-                (
-                    historical_player[0],
-                    historical_player[1],
-                    self.player.size_x,
-                    self.player.size_y,
-                ),
-            )
+        #for historical_player in self.historical_player_path:
+        #    pygame.draw.rect(
+        #        self._display_surf,
+        #        (200, 100, 0),
+        #        (
+        #            historical_player[0],
+        #            historical_player[1],
+        #            self.player.size_x,
+        #            self.player.size_y,
+        #        ),
+        #    )
 
         pygame.draw.rect(
             self._display_surf,
@@ -486,8 +486,8 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     player_position_center = (player_position[0] + 10, player_position[1] + 10)
 
     player_position_cell_i_j = (
-        player_position[0] // 50,
-        player_position[1] // 50,
+        ((player_position[0])) // 50,
+        ((player_position[1])) // 50,
     )
 
     step_index_temp = path.index(player_position_cell_i_j)
@@ -502,6 +502,7 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
         current_step[0] * 50 + 25,
         current_step[1] * 50 + 25,
     )
+
     # print("current_step", current_step)
     next_step = path[current_step_index + 1]
     next_step_position_center = (
@@ -514,6 +515,8 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
         next_step[1] - current_step[1],
     )  # (1,0) for right, (-1,0) for left, (0,1) for down, (0,-1) for up
 
+
+
     [output_left, output_right] = [0, 0]
 
     [output_left, output_right] = get_output_follow_line(
@@ -521,13 +524,13 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     )
 
     for obstacle in perception_list[1]:
-        position_obstacle = (obstacle[0] + 5, obstacle[1] - 5)
+        position_obstacle = (obstacle[0] + 5, obstacle[1] + 5)
 
         temp = get_output_dodge_obstacle(
-            player_position_center, position_obstacle, main_direction_vector
+            player_position_center, position_obstacle, main_direction_vector, current_step_position_center
         )
         print("temp", temp)
-        factor = 10
+        factor = 100
         output_left += factor * temp[0]
         print("**output_left", output_left)
         output_right += factor * temp[1]  # + output_right
@@ -539,6 +542,7 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
         south = [0, 0, 1, 0]
         west = [0, 0, 0, 1]
 
+    instructions = [0,0,0,0]
     if main_direction_vector == (1, 0):
         instructions = Move.east.value
         if output_left > output_right:
@@ -566,8 +570,9 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
 
     print("instructions", instructions)
 
+
     if len(perception_list[1]) > 0:
-        time.sleep(0.1)
+        time.sleep(0.00001)
 
     return [instructions, current_step_index]
 
@@ -577,59 +582,82 @@ def get_output_follow_line(
 ):
     if main_direction_vector[0] == 0:
         # vertical line
-        distance_line_secondary_direction = line_position[0] - player_position_center[0]
+        distance_line_secondary_direction = (line_position[0] - player_position_center[0]) * main_direction_vector[1]
     elif main_direction_vector[1] == 0:
         # horizontal line
-        distance_line_secondary_direction = line_position[1] - player_position_center[1]
+        distance_line_secondary_direction = (line_position[1] - player_position_center[1]) * main_direction_vector[0]
 
-    print("distance_line_secondary_direction", distance_line_secondary_direction)
+    if distance_line_secondary_direction > 0:
+        return [(distance_line_secondary_direction - 50) / 50, 0]
+    elif distance_line_secondary_direction < 0:
+        return [0, (distance_line_secondary_direction - 50) / 50]
+    else:
+        return [0,0]
 
-    distance_line_left = max(0, distance_line_secondary_direction) / 15
-    distance_line_right = -min(0, distance_line_secondary_direction) / 15
-
-    print("distance_line_left", distance_line_left)
-    print("distance_line_right", distance_line_right)
-
-    output_left = 1 - distance_line_left
-    output_right = 1 - distance_line_right
-
-    print("output_left", output_left, "output_right", output_right)
-
-    return [output_left, output_right]
 
 
 def get_output_dodge_obstacle(
-    player_position_center, obstacle_position, main_direction_vector
+    player_position_center, obstacle_position, main_direction_vector, line_position
 ):
 
     if main_direction_vector[0] == 0:
         # vertical line
-        distance_obstacle = player_position_center[0] - obstacle_position[0]
+        distance_obstacle = player_position_center[0] - obstacle_position[0] * main_direction_vector[1]
+        temp_for_math = (player_position_center[1] - obstacle_position[1]) * main_direction_vector[1]
+        if(main_direction_vector[1] == 1):
+            if(temp_for_math < 0):
+                scale = 1# abs(1 / temp_for_math)
+            else:
+                scale = 0
+        else:
+            if(temp_for_math > 0):
+                scale = 0# abs(1 / temp_for_math)
+            else:
+                scale = 1
+
     elif main_direction_vector[1] == 0:
         # horizontal line
-        distance_obstacle = player_position_center[1] - obstacle_position[1]
-
+        distance_obstacle = (player_position_center[1] - obstacle_position[1]) * main_direction_vector[0]
+        temp_for_math = (player_position_center[0] - obstacle_position[0]) * main_direction_vector[0]
+        if (main_direction_vector[0] == 1):
+            if (temp_for_math < 0):
+                scale = 1  # abs(1 / temp_for_math)
+            else:
+                scale = 0
+        else:
+            if (temp_for_math > 0):
+                scale = 0  # abs(1 / temp_for_math)
+            else:
+                scale = 1
+    print("player_position_center", player_position_center[1])
+    print("obstacle_position", obstacle_position[1])
     print("distance_obstacle", distance_obstacle)
 
-    if distance_obstacle > 0 and distance_obstacle < 16:
-        output_left = (distance_obstacle - 16) / 32
-        output_right = (distance_obstacle - 16) / 16
+    if distance_obstacle >= 0 and distance_obstacle < 16:
+        output_left = (16 - distance_obstacle) / 32
+        output_right = (16 - distance_obstacle) / 16
         print("case 1")
     elif distance_obstacle < 0 and distance_obstacle > -16:
-        output_left = (distance_obstacle + 16) / 16
-        output_right = (distance_obstacle + 16) / 32
+        output_left = abs((16 + distance_obstacle)) / 16
+        output_right = abs((16 + distance_obstacle)) / 32
         print("case 2")
     else:
         output_left = 0
         output_right = 0
         print("case 3")
 
-    # scale_factor = 1 ((obstacle_position[0] + player_position_center[0]) ** 2) + (
-    #     (player_position_center[1] + obstacle_position[1]) ** 2
-    # )
 
-    # output_left = output_left / scale_factor
-    # output_right = output_right / scale_factor
+    temp_r4 = r4(line_position, obstacle_position, main_direction_vector)
+    #scale_factor = math.sqrt(((obstacle_position[0] + player_position_center[0]) ** 2) + (
+    #    (player_position_center[1] + obstacle_position[1]) ** 2
+    #)) * 200
+    #print("________", scale_factor)
+
+    print("R3", output_left," ", output_right)
+    print("R4", temp_r4)
+
+    output_left = min(output_left, temp_r4[0]) * scale
+    output_right = min(output_right, temp_r4[1]) * scale
 
     return [output_left, output_right]
 
@@ -638,27 +666,21 @@ def r4(line_position, obstacle_position, main_direction_vector):
 
     if main_direction_vector[0] == 0:
         # vertical line
-        distance_line_secondary_direction = line_position[0] - obstacle_position[0]
+        distance_obstacle_center = line_position[0] - obstacle_position[0]
     elif main_direction_vector[1] == 0:
         # horizontal line
-        distance_line_secondary_direction = line_position[1] - obstacle_position[1]
+        distance_obstacle_center = line_position[1] - obstacle_position[1]
 
-    if distance_line_secondary_direction > 0:
-        output_left = (distance_line_secondary_direction) / 25
+    if distance_obstacle_center < 0:
+        output_left = abs(distance_obstacle_center) / 25
         output_right = 0
-    elif distance_line_secondary_direction < 0:
+    elif distance_obstacle_center > 0:
         output_left = 0
-        output_right = (distance_line_secondary_direction + 16) / 16
+        output_right = abs(distance_obstacle_center) / 25
     else:
-        output_left = 0
-        output_right = 0
+        output_left = 1
+        output_right = 1
 
-    scale_factor = ((obstacle_position[0] + player_position_center[0]) ** 2) + (
-        (player_position_center[1] + obstacle_position[1]) ** 2
-    )
-
-    output_left = output_left / scale_factor
-    output_right = output_right / scale_factor
 
     return [output_left, output_right]
 
@@ -704,13 +726,40 @@ def do_planification():
         (22, 14),
         (22, 15),
     ]
+    path = [(1, 0), (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (2, 7), (3, 7), (4, 7), (4, 6), (4, 5), (#0-12
+        4, 4), (4, 3), (4, 2), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (9, 1), (9, 2), (9, 3), (9, 4), (9, 5), (9, 6), (#13-26
+         9, 7), (10, 7), (11, 7), (12, 7), (13, 7), (13, 6), (13, 5), (13, 4), (13, 3), (13, 2), (13, 1), (13, 2), (#27-38
+         13, 3), (13, 4), (14, 4), (15, 4), (16, 4), (17, 4), (17, 3), (17, 2), (18, 2), (19, 2), (20, 2), (20, 1), (
+         21, 1), (20, 1), (19, 1), (19, 2), (18, 2), (17, 2), (17, 3), (17, 4), (18, 4), (19, 4), (20, 4), (19, 4), (
+         18, 4), (17, 4), (17, 3), (17, 2), (18, 2), (19, 2), (20, 2), (21, 2), (22, 2), (22, 3), (22, 4), (22, 5), (
+         22, 6), (22, 7), (22, 6), (22, 5), (22, 4), (22, 3), (22, 2), (21, 2), (20, 2), (19, 2), (18, 2), (17, 2), (
+         17, 3), (17, 4), (18, 4), (19, 4), (19, 5), (19, 6), (20, 6), (19, 6), (19, 5), (19, 4), (18, 4), (17, 4), (
+         16, 4), (15, 4), (14, 4), (13, 4), (13, 5), (13, 6), (13, 7), (12, 7), (11, 7), (10, 7), (9, 7), (8, 7), (
+         7, 7), (6, 7), (5, 7), (4, 7), (4, 8), (4, 9), (5, 9), (6, 9), (7, 9), (8, 9), (9, 9), (9, 10), (9, 11), (
+         10, 11), (11, 11), (12, 11), (13, 11), (13, 12), (13, 13), (14, 13), (15, 13), (16, 13), (17, 13), (17, 14), (
+         18, 14), (19, 14), (20, 14), (21, 14), (21, 13), (21, 12), (22, 12), (22, 11), (22, 10), (21, 10), (21, 9), (
+         21, 10), (22, 10), (22, 11), (22, 12), (21, 12), (21, 13), (21, 14), (20, 14), (19, 14), (18, 14), (17, 14), (
+         17, 13), (16, 13), (15, 13), (15, 12), (15, 11), (15, 12), (15, 13), (14, 13), (13, 13), (13, 12), (13, 11), (
+         12, 11), (11, 11), (10, 11), (9, 11), (9, 10), (9, 9), (8, 9), (7, 9), (6, 9), (5, 9), (4, 9), (4, 8), (
+         4, 7), (5, 7), (6, 7), (7, 7), (8, 7), (9, 7), (10, 7), (11, 7), (12, 7), (13, 7), (13, 6), (13, 5), (13, 4), (
+         14, 4), (15, 4), (15, 5), (15, 6), (15, 7), (15, 8), (15, 9), (15, 8), (15, 7), (15, 6), (15, 5), (15, 4), (
+         14, 4), (13, 4), (13, 5), (13, 6), (13, 7), (12, 7), (11, 7), (10, 7), (9, 7), (8, 7), (7, 7), (6, 7), (
+         5, 7), (4, 7), (4, 8), (4, 9), (5, 9), (6, 9), (7, 9), (8, 9), (9, 9), (9, 10), (9, 11), (10, 11), (11, 11), (
+         12, 11), (13, 11), (13, 12), (13, 13), (13, 14), (12, 14), (11, 14), (11, 13), (11, 14), (10, 14), (9, 14), (
+         8, 14), (8, 13), (8, 14), (7, 14), (6, 14), (6, 13), (6, 12), (6, 11), (6, 10), (6, 9), (5, 9), (4, 9), (
+         4, 10), (4, 11), (4, 12), (4, 13), (4, 14), (4, 13), (4, 12), (4, 11), (4, 10), (4, 9), (4, 8), (4, 7), (
+         3, 7), (2, 7), (1, 7), (1, 8), (1, 9), (1, 10), (1, 11), (1, 12), (1, 13), (1, 14), (1, 13), (1, 12), (
+         1, 11), (1, 10), (1, 9), (1, 8), (1, 7), (2, 7), (3, 7), (4, 7), (4, 8), (4, 9), (5, 9), (6, 9), (7, 9), (
+         8, 9), (9, 9), (9, 10), (9, 11), (10, 11), (11, 11), (12, 11), (13, 11), (13, 12), (13, 13), (14, 13), (
+         15, 13), (16, 13), (17, 13), (17, 14), (18, 14), (19, 14), (20, 14), (21, 14), (22, 14), (22, 15)]
+
 
     # A-star
     starting_positon = (1, 0)
     ending_position = (22, 15)
 
-    path = astar(starting_positon, ending_position)
-    print("path", path)
+    #path = astar(starting_positon, ending_position)
+    #print("path", path)
     return path
 
 
