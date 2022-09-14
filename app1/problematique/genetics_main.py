@@ -49,7 +49,7 @@ def train_genetics(fitness_function, numparams, min_param_value, max_param_value
     ga_sim.set_fit_fun(fitness_function)
 
     # TODO: Adjust optimization meta-parameters
-    numGenerations = 1  # 15
+    numGenerations = 10  # 15
     mutationProb = 0.01  # 0.01
     crossoverProb = 0.5  # 0.8
 

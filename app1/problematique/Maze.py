@@ -222,7 +222,37 @@ class Maze:
             item_list.append(self.treasureList[i])
 
         # POUR DEBUG - tenir la touche "p" pour voir la zone de perception
-        pygame.draw.rect(display_surf, GREEN, perception_rect)
+        # pygame.draw.rect(display_surf, GREEN, perception_rect)
+        thick = 2
+        color_w = (200, 100, 10)
+        pygame.draw.line(
+            display_surf,
+            color_w,
+            perception_rect.topleft,
+            perception_rect.topright,
+            thick,
+        )
+        pygame.draw.line(
+            display_surf,
+            color_w,
+            perception_rect.topright,
+            perception_rect.bottomright,
+            thick,
+        )
+        pygame.draw.line(
+            display_surf,
+            color_w,
+            perception_rect.bottomright,
+            perception_rect.bottomleft,
+            thick,
+        )
+        pygame.draw.line(
+            display_surf,
+            color_w,
+            perception_rect.bottomleft,
+            perception_rect.topleft,
+            thick,
+        )
         pygame.display.flip()
         # print([wall_list, obstacle_list, item_list, monster_list])
         return [wall_list, obstacle_list, item_list, monster_list]

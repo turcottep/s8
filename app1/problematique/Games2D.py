@@ -1,3 +1,4 @@
+import time
 from pygame.locals import *
 import pygame
 
@@ -26,7 +27,9 @@ class App:
         self.score = 0
         self.timer = 0.0
         self.player = Player()
+        self.historical_player_path = []
         self.maze = Maze(mazefile)
+        self.ai_mode = True
 
     def on_init(self):
         pygame.init()
@@ -64,6 +67,14 @@ class App:
         if keys[K_DOWN] or keys[K_s]:
             self.move_player_down()
 
+        if keys[K_k]:
+            print("k")
+            self.ai_mode = False
+
+        if keys[K_l]:
+            print("l")
+            self.ai_mode = True
+
         # Utility functions for AI
         if keys[K_p]:
             print("perception:")
@@ -87,18 +98,18 @@ class App:
     def on_AI_input(self, instruction):
         # print("instruction", instruction)
         # "instruction" est une liste de 4 éléments [up, right, down, left]
+        if self.ai_mode:
+            if instruction[0]:
+                self.move_player_up()
 
-        if instruction[0]:
-            self.move_player_up()
+            if instruction[1]:
+                self.move_player_right()
 
-        if instruction[1]:
-            self.move_player_right()
+            if instruction[2]:
+                self.move_player_down()
 
-        if instruction[2]:
-            self.move_player_down()
-
-        if instruction[3]:
-            self.move_player_left()
+            if instruction[3]:
+                self.move_player_left()
 
     def move_player_right(self):
         self.player.moveRight()
@@ -168,8 +179,21 @@ class App:
         text = font.render("Time: " + format(self.timer, ".2f"), True, BLACK)
         self._display_surf.blit(text, (WIDTH - 300, 10))
 
-    def on_render(self):
+    def on_render(self, path):
         self.maze_render()
+
+        for historical_player in self.historical_player_path:
+            pygame.draw.rect(
+                self._display_surf,
+                (200, 100, 0),
+                (
+                    historical_player[0],
+                    historical_player[1],
+                    self.player.size_x,
+                    self.player.size_y,
+                ),
+            )
+
         pygame.draw.rect(
             self._display_surf,
             (200, 100, 0),
@@ -180,6 +204,25 @@ class App:
                 self.player.size_y,
             ),
         )
+        self.historical_player_path.append(
+            (
+                self.player.x,
+                self.player.y,
+            )
+        )
+
+        for i in range(len(path) - 1):
+            live_cell = path[i]
+            next_cell = path[i + 1]
+
+            pygame.draw.line(
+                self._display_surf,
+                (0, 0, 255),
+                (live_cell[0] * 50 + 25, live_cell[1] * 50 + 25),
+                (next_cell[0] * 50 + 25, next_cell[1] * 50 + 25),
+                2,
+            )
+
         self._display_surf.blit(self._image_surf, (self.player.x, self.player.y))
         pygame.display.flip()
 
@@ -208,6 +251,7 @@ class App:
         original_monster_list = []
         for monster in self.maze.monsterList:
             original_monster_list.append(monster)
+        step_index = 0
 
         while self._running:
             self._clock.tick(GAME_CLOCK)
@@ -219,13 +263,21 @@ class App:
             pygame.event.pump()
             keys = pygame.key.get_pressed()
             self.on_keyboard_input(keys)
-            check_for_incoming_monster_to_set_stats(
-                player=self.player,
-                monster_list=original_monster_list,
-                best_attributes=best_attributes,
+            # print("player size", self.player.get_rect())
+            if len(original_monster_list) > 0:
+                check_for_incoming_monster_to_set_stats(
+                    player=self.player,
+                    monster_list=original_monster_list,
+                    best_attributes=best_attributes,
+                )
+
+            [key_to_press_for_AI, step_index] = get_movement_for_ai(
+                path,
+                self.player.get_position(),
+                self.maze.make_perception_list(self.player, self._display_surf),
+                step_index,
             )
-            # key_to_press_for_AI = get_movement_for_ai(path, self.player.get_position())
-            # self.on_AI_input(key_to_press_for_AI) # A décommenter pour utiliser l'IA
+            self.on_AI_input(key_to_press_for_AI)  # A décommenter pour utiliser l'IA
             if self.on_coin_collision():
                 self.score += 1
             if self.on_treasure_collision():
@@ -240,7 +292,7 @@ class App:
             if self.on_exit():
                 self._running = False
                 self._win = True
-            self.on_render()
+            self.on_render(path)
 
         while self._win:
             for event in pygame.event.get():
@@ -257,68 +309,209 @@ class App:
         self.on_cleanup()
 
 
-def get_movement_for_ai(path, player_position):
-    player_position_cell_i_j = (player_position[0] // 50, player_position[1] // 50)
-    current_step = path.index(player_position_cell_i_j)
-    print("current_step", current_step)
-    next_step = path[current_step + 1]
+def get_movement_for_ai(path, player_position, perception_list, current_step_index):
+    player_position_center = (player_position[0] + 10, player_position[1] + 10)
+
+    player_position_cell_i_j = (
+        player_position[0] // 50,
+        player_position[1] // 50,
+    )
+
+    step_index_temp = path.index(player_position_cell_i_j)
+    if not current_step_index:
+        current_step_index = step_index_temp
+    elif step_index_temp > current_step_index:
+        current_step_index = step_index_temp
+    print("current_step_index", current_step_index)
+
+    current_step = path[current_step_index]
+    current_step_position_center = (
+        current_step[0] * 50 + 25,
+        current_step[1] * 50 + 25,
+    )
+    # print("current_step", current_step)
+    next_step = path[current_step_index + 1]
     next_step_position = (next_step[0] * 50 + 25, next_step[1] * 50 + 25)
 
-    instructions = [0, 0, 0, 0]  # up, right, down, left
+    main_direction_vector = (
+        next_step[0] - current_step[0],
+        next_step[1] - current_step[1],
+    )
 
-    if next_step_position[0] > player_position[0] + 5:
+    # distance from the line
+    if main_direction_vector[0] == 0:
+        # vertical line
+        distance_from_line = player_position_center[0] - next_step_position[0]
+    elif main_direction_vector[1] == 0:
+        # horizontal line
+        distance_from_line = player_position_center[1] - next_step_position[1]
+    # print("distance_from_line", distance_from_line)
+
+    # distance from the obstacle
+    obstacle_list = perception_list[1]
+    # print("obstacle_list", obstacle_list)
+    # print("perception_list", perception_list)
+
+    # get the closest obstacle in front of the player
+    closest_obs = None
+    min_distance = 100000000
+    for obstacle in obstacle_list:
+        if main_direction_vector[0] == 0:
+            # vertical line
+            if obstacle[1] + 5 < player_position_center[1] - main_direction_vector[
+                1
+            ] * (0):
+                print("skipped because obstacle is behind")
+                continue
+        if main_direction_vector[1] == 0:
+            # horizontal line
+            if obstacle[0] + 5 < player_position_center[0] - main_direction_vector[
+                0
+            ] * (0):
+                print("skipped because obstacle is behind")
+                continue
+
+        distance_from_obs = ((player_position_center[0] - obstacle[0]) ** 2) + (
+            (player_position_center[1] - obstacle[1]) ** 2
+        )
+        if distance_from_obs < min_distance:
+            min_distance = distance_from_obs
+            closest_obs = obstacle
+
+    print("closest_obs", closest_obs)
+    print("player,pos", player_position_center)
+    print("line position", next_step_position)
+
+    overlap_left = 0
+    overlap_right = 0
+    if closest_obs:
+        if main_direction_vector[0] == 0:
+            # vertical line
+            overlap_left = max(
+                0,
+                min(current_step_position_center[0], closest_obs[0] + 10)
+                - max(current_step_position_center[0] - 10, closest_obs[0]),
+            )
+
+            overlap_right = max(
+                0,
+                min(current_step_position_center[0] + 10, closest_obs[0] + 10)
+                - max(current_step_position_center[0], closest_obs[0]),
+            )
+        elif main_direction_vector[1] == 0:
+            # horizontal line
+            overlap_left = max(
+                0,
+                min(current_step_position_center[1], closest_obs[1] + 10)
+                - max(current_step_position_center[1] - 10, closest_obs[1]),
+            )
+
+            overlap_right = max(
+                0,
+                min(current_step_position_center[1] + 10, closest_obs[1] + 10)
+                - max(current_step_position_center[1], closest_obs[1]),
+            )
+
+        print("overlap:", overlap_left, overlap_right)
+
+    # secondary instruction
+    secondary_instruction = 0
+
+    desired_distance_from_line = 0
+
+    if overlap_left > 0 and overlap_right > 0:
+        if overlap_right >= overlap_left:
+            desired_distance_from_line = -(10 + overlap_left)
+        else:
+            desired_distance_from_line = 10 + overlap_right
+
+    elif overlap_right > 0:
+        desired_distance_from_line = -overlap_right
+    elif overlap_left > 0:
+        desired_distance_from_line = overlap_left
+
+    print("desired_distance_from_line", desired_distance_from_line)
+    print("distance_from_line", distance_from_line)
+    secondary_instruction = desired_distance_from_line - distance_from_line
+
+    instructions = [0, 0, 0, 0]  # up, right, down, left
+    if main_direction_vector[0] == 1:
         instructions[1] = 1
-    elif next_step_position[0] < player_position[0] + 5:
+    elif main_direction_vector[0] == -1:
         instructions[3] = 1
-    if next_step_position[1] > player_position[1] + 5:
+    if main_direction_vector[1] == 1:
         instructions[2] = 1
-    elif next_step_position[1] < player_position[1] + 5:
+    elif main_direction_vector[1] == -1:
         instructions[0] = 1
 
-    return instructions
+    print("main_direction_vector", main_direction_vector)
+    print("secondary_instruction", secondary_instruction)
+
+    if main_direction_vector[0] == 0:
+        # vertical line
+        if secondary_instruction > 0:
+            instructions[1] = 1
+            print("move right")
+        elif secondary_instruction < 0:
+            instructions[3] = 1
+            print("move left")
+    elif main_direction_vector[1] == 0:
+        # horizontal line
+        if secondary_instruction > 0:
+            instructions[2] = 1
+            print("move down")
+        elif secondary_instruction < 0:
+            instructions[0] = 1
+            print("move up")
+
+    # instructions = [0, 0, 0, 0]
+    # if closest_obs:
+    # time.sleep(0.1)
+
+    return [instructions, current_step_index]
 
 
 def do_planification():
 
-    # planif = [
-    #     (1, 0),
-    #     (1, 1),
-    #     (1, 2),
-    #     (1, 3),
-    #     (1, 4),
-    #     (1, 5),
-    #     (1, 6),
-    #     (1, 7),
-    #     (2, 7),
-    #     (3, 7),
-    #     (4, 7),
-    #     (4, 8),
-    #     (4, 9),
-    #     (5, 9),
-    #     (6, 9),
-    #     (7, 9),
-    #     (8, 9),
-    #     (9, 9),
-    #     (9, 10),
-    #     (9, 11),
-    #     (10, 11),
-    #     (11, 11),
-    #     (12, 11),
-    #     (13, 11),
-    #     (13, 12),
-    #     (13, 13),
-    #     (14, 13),
-    #     (15, 13),
-    #     (16, 13),
-    #     (17, 13),
-    #     (17, 14),
-    #     (18, 14),
-    #     (19, 14),
-    #     (20, 14),
-    #     (21, 14),
-    #     (22, 14),
-    #     (22, 15),
-    # ]
+    planif = [
+        (1, 0),
+        (1, 1),
+        (1, 2),
+        (1, 3),
+        (1, 4),
+        (1, 5),
+        (1, 6),
+        (1, 7),
+        (2, 7),
+        (3, 7),
+        (4, 7),
+        (4, 8),
+        (4, 9),
+        (5, 9),
+        (6, 9),
+        (7, 9),
+        (8, 9),
+        (9, 9),
+        (9, 10),
+        (9, 11),
+        (10, 11),
+        (11, 11),
+        (12, 11),
+        (13, 11),
+        (13, 12),
+        (13, 13),
+        (14, 13),
+        (15, 13),
+        (16, 13),
+        (17, 13),
+        (17, 14),
+        (18, 14),
+        (19, 14),
+        (20, 14),
+        (21, 14),
+        (22, 14),
+        (22, 15),
+    ]
 
     # A-star
     starting_positon = (1, 0)
@@ -392,49 +585,67 @@ def quick_genetics(player, monster, attributes):
 
 
 def do_genetics(player, monsterList):
+
+    # starting timer
+    start = time.time()
+
     print("training genetics to fight...: \n\n")
-
-    # for i, monster in enumerate(monsterList):
-    # attributes_temp = []
-    # for i in range(NUM_ATTRIBUTES):
-    #     attributes_temp.append(random.randint(0, MAX_ATTRIBUTE))
-    # player.set_attributes(attributes_temp)
-    # results = monster.mock_fight(player)
-    # print("results", results)
-
-    # genetic algorithm
-    # best_attributes = train_genetics(
-    #     lambda attributes: genetics_fitness_function(player, monster, attributes),
-    #     NUM_ATTRIBUTES,
-    #     0,
-    #     MAX_ATTRIBUTE,
-    # )
 
     pop_size = 1000
     nb_bits = 64
-    population = np.random.randint(0, 2, (pop_size, NUM_ATTRIBUTES * nb_bits))
-    print("population", population.shape)
     min_value = 0
     max_value = MAX_ATTRIBUTE
     cvalues = np.zeros((pop_size, NUM_ATTRIBUTES))
     print("cvalues", cvalues.shape)
     max_binary_value = 2**nb_bits - 1
 
-    for i in range(pop_size):
-        for j in range(NUM_ATTRIBUTES):
-            cvalues[i, j] = min_value + (max_value - min_value) * (
-                np.sum(
-                    population[i, j * nb_bits : (j + 1) * nb_bits]
-                    * 2 ** np.arange(nb_bits)
-                )
-                / max_binary_value
-            )
+    while True:
 
-    best_attributes = []
-    for i, monster in enumerate(monsterList):
-        best_attributes.append(quick_genetics(player, monster, cvalues))
-        player.set_attributes(best_attributes[i])
-        results = monster.mock_fight(player)
-        print("results best_attributes", results)
+        # taux de mutation à 100%
+        population = np.random.randint(0, 2, (pop_size, NUM_ATTRIBUTES * nb_bits))
+        print("population", population.shape)
+
+        for i in range(pop_size):
+            for j in range(NUM_ATTRIBUTES):
+                cvalues[i, j] = min_value + (max_value - min_value) * (
+                    np.sum(
+                        population[i, j * nb_bits : (j + 1) * nb_bits]
+                        * 2 ** np.arange(nb_bits)
+                    )
+                    / max_binary_value
+                )
+
+        best_attributes = []
+
+        got_perfect_attributes_temp = True
+        for i, monster in enumerate(monsterList):
+            best_attributes.append(quick_genetics(player, monster, cvalues))
+            print("best_attributes", best_attributes)
+            player.set_attributes(best_attributes[i])
+            results = monster.mock_fight(player)
+            if results[0] != 4:
+                got_perfect_attributes_temp = False
+            print("results best_attributes", results)
+
+        if got_perfect_attributes_temp:
+            break
+
+    # pop_size = 10
+    # nb_bits = 64
+    # monster = monsterList[0]
+
+    # best_genetics = train_genetics(
+    #     lambda x: genetics_fitness_function(player, monster, x),
+    #     NUM_ATTRIBUTES,
+    #     0,
+    #     MAX_ATTRIBUTE,
+    # )
+    # player.set_attributes(best_genetics)
+    # results = monster.mock_fight(player)
+    # print("results best_attributes", results)
+
+    # end timer
+    end = time.time()
+    print("time to train genetics", end - start, "seconds")
 
     return best_attributes
