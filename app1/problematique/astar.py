@@ -1,10 +1,14 @@
-# source :  https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
-
+# Credit for this: Nicholas Swift
+# as found at https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
+from warnings import warn
+import heapq
 from swiplserver import PrologMQI
 
 
 class Node:
-    """A node class for A* Pathfinding"""
+    """
+    A node class for A* Pathfinding
+    """
 
     def __init__(self, parent=None, position=None):
         self.parent = parent
@@ -17,11 +21,36 @@ class Node:
     def __eq__(self, other):
         return self.position == other.position
 
+    def __repr__(self):
+        return f"{self.position} - g: {self.g} h: {self.h} f: {self.f}"
 
+    # defining less than for purposes of heap queue
+    def __lt__(self, other):
+        return self.f < other.f
+
+    # defining greater than for purposes of heap queue
+    def __gt__(self, other):
+        return self.f > other.f
+
+
+def return_path(current_node):
+    path = []
+    current = current_node
+    while current is not None:
+        path.append(current.position)
+        current = current.parent
+    return path[::-1]  # Return reversed path
+
+
+# this the new one
 def astar(start, end):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-    # print("current_position", current_position)
-    # get possible moves from current state
+    """
+    Returns a list of tuples as a path from the given start to the given end in the given maze
+    :param maze:
+    :param start:
+    :param end:
+    :return:
+    """
     with PrologMQI() as mqi:
         with PrologMQI() as mqi_file:
             with mqi_file.create_thread() as prolog_thread:
@@ -42,32 +71,31 @@ def astar(start, end):
                 open_list = []
                 closed_list = []
 
-                # Add the start node
-                open_list.append(start_node)
+                # Heapify the open_list and Add the start node
+                heapq.heapify(open_list)
+                heapq.heappush(open_list, start_node)
+
+                # Adding a stop condition
+                outer_iterations = 0
+                max_iterations = 25 * 15  # arbitrary value
 
                 # Loop until you find the end
                 while len(open_list) > 0:
+                    outer_iterations += 1
+
+                    if outer_iterations > max_iterations:
+                        # if we hit this point return the path such as it is
+                        # it will not contain the destination
+                        warn("giving up on pathfinding too many iterations")
+                        return return_path(current_node)
 
                     # Get the current node
-                    current_node = open_list[0]
-                    current_index = 0
-                    for index, item in enumerate(open_list):
-                        if item.f < current_node.f:
-                            current_node = item
-                            current_index = index
-
-                    # Pop current off open list, add to closed list
-                    open_list.pop(current_index)
+                    current_node = heapq.heappop(open_list)
                     closed_list.append(current_node)
 
                     # Found the goal
                     if current_node == end_node:
-                        path = []
-                        current = current_node
-                        while current is not None:
-                            path.append(current.position)
-                            current = current.parent
-                        return path[::-1]  # Return reversed path
+                        return return_path(current_node)
 
                     # Generate children
                     children = []
@@ -98,29 +126,48 @@ def astar(start, end):
 
                     # Loop through children
                     for child in children:
-
                         # Child is on the closed list
-                        for closed_child in closed_list:
-                            if child == closed_child:
-                                continue
+                        if (
+                            len(
+                                [
+                                    closed_child
+                                    for closed_child in closed_list
+                                    if closed_child == child
+                                ]
+                            )
+                            > 0
+                        ):
+                            continue
 
                         # Create the f, g, and h values
                         child.g = current_node.g + 1
-                        child.h = (abs(child.position[0] - end_node.position[0])) + (
-                            abs(child.position[1] - end_node.position[1])
+                        child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
+                            (child.position[1] - end_node.position[1]) ** 2
                         )
                         child.f = child.g + child.h
 
                         # Child is already in the open list
-                        for open_node in open_list:
-                            if child == open_node and child.g > open_node.g:
-                                continue
+                        if (
+                            len(
+                                [
+                                    open_node
+                                    for open_node in open_list
+                                    if child.position == open_node.position
+                                    and child.g > open_node.g
+                                ]
+                            )
+                            > 0
+                        ):
+                            continue
 
                         # Add the child to the open list
-                        open_list.append(child)
+                        heapq.heappush(open_list, child)
+
+                warn("Couldn't get a path to destination")
+                return None
 
 
-def main():
+def example():
 
     # A-star
     starting_positon = (1, 0)
@@ -132,4 +179,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    example()
