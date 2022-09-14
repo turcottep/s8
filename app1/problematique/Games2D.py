@@ -1,3 +1,4 @@
+import enum
 import time
 from pygame.locals import *
 import pygame
@@ -309,7 +310,9 @@ class App:
         self.on_cleanup()
 
 
-def get_movement_for_ai(path, player_position, perception_list, current_step_index):
+def get_movement_for_ai_fucked(
+    path, player_position, perception_list, current_step_index
+):
     player_position_center = (player_position[0] + 10, player_position[1] + 10)
 
     player_position_cell_i_j = (
@@ -358,14 +361,14 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     for obstacle in obstacle_list:
         if main_direction_vector[0] == 0:
             # vertical line
-            if obstacle[1] + 5 < player_position_center[1] - main_direction_vector[
+            if obstacle[1] + 4 < player_position_center[1] - main_direction_vector[
                 1
             ] * (0):
                 print("skipped because obstacle is behind")
                 continue
         if main_direction_vector[1] == 0:
             # horizontal line
-            if obstacle[0] + 5 < player_position_center[0] - main_direction_vector[
+            if obstacle[0] + 4 < player_position_center[0] - main_direction_vector[
                 0
             ] * (0):
                 print("skipped because obstacle is behind")
@@ -384,6 +387,7 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
 
     overlap_left = 0
     overlap_right = 0
+    distance_front = 100000
     if closest_obs:
         if main_direction_vector[0] == 0:
             # vertical line
@@ -398,6 +402,8 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
                 min(current_step_position_center[0] + 10, closest_obs[0] + 10)
                 - max(current_step_position_center[0], closest_obs[0]),
             )
+            distance_front = abs(player_position_center[1] - closest_obs[1])
+
         elif main_direction_vector[1] == 0:
             # horizontal line
             overlap_left = max(
@@ -411,6 +417,7 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
                 min(current_step_position_center[1] + 10, closest_obs[1] + 10)
                 - max(current_step_position_center[1], closest_obs[1]),
             )
+            distance_front = abs(player_position_center[0] - closest_obs[0])
 
         print("overlap:", overlap_left, overlap_right)
 
@@ -432,6 +439,8 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
 
     print("desired_distance_from_line", desired_distance_from_line)
     print("distance_from_line", distance_from_line)
+    print("distance_front", distance_front)
+
     secondary_instruction = desired_distance_from_line - distance_from_line
 
     instructions = [0, 0, 0, 0]  # up, right, down, left
@@ -447,28 +456,211 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     print("main_direction_vector", main_direction_vector)
     print("secondary_instruction", secondary_instruction)
 
-    if main_direction_vector[0] == 0:
-        # vertical line
-        if secondary_instruction > 0:
-            instructions[1] = 1
-            print("move right")
-        elif secondary_instruction < 0:
-            instructions[3] = 1
-            print("move left")
-    elif main_direction_vector[1] == 0:
-        # horizontal line
-        if secondary_instruction > 0:
-            instructions[2] = 1
-            print("move down")
-        elif secondary_instruction < 0:
-            instructions[0] = 1
-            print("move up")
+    if distance_front > 10:
+        if main_direction_vector[0] == 0:
+            # vertical line
+            if secondary_instruction > 0:
+                instructions[1] = 1
+                print("move right")
+            elif secondary_instruction < 0:
+                instructions[3] = 1
+                print("move left")
+        elif main_direction_vector[1] == 0:
+            # horizontal line
+            if secondary_instruction > 0:
+                instructions[2] = 1
+                print("move down")
+            elif secondary_instruction < 0:
+                instructions[0] = 1
+                print("move up")
 
     # instructions = [0, 0, 0, 0]
     # if closest_obs:
     # time.sleep(0.1)
 
     return [instructions, current_step_index]
+
+
+def get_movement_for_ai(path, player_position, perception_list, current_step_index):
+
+    player_position_center = (player_position[0] + 10, player_position[1] + 10)
+
+    player_position_cell_i_j = (
+        player_position[0] // 50,
+        player_position[1] // 50,
+    )
+
+    step_index_temp = path.index(player_position_cell_i_j)
+    if not current_step_index:
+        current_step_index = step_index_temp
+    elif step_index_temp > current_step_index:
+        current_step_index = step_index_temp
+    print("current_step_index", current_step_index)
+
+    current_step = path[current_step_index]
+    current_step_position_center = (
+        current_step[0] * 50 + 25,
+        current_step[1] * 50 + 25,
+    )
+    # print("current_step", current_step)
+    next_step = path[current_step_index + 1]
+    next_step_position_center = (
+        next_step[0] * 50 + 25,
+        next_step[1] * 50 + 25,
+    )  # (x, y) coordinates of the center of the next step
+
+    main_direction_vector = (
+        next_step[0] - current_step[0],
+        next_step[1] - current_step[1],
+    )  # (1,0) for right, (-1,0) for left, (0,1) for down, (0,-1) for up
+
+    [output_left, output_right] = [0, 0]
+
+    [output_left, output_right] = get_output_follow_line(
+        player_position_center, current_step_position_center, main_direction_vector
+    )
+
+    for obstacle in perception_list[1]:
+        position_obstacle = (obstacle[0] + 5, obstacle[1] - 5)
+
+        temp = get_output_dodge_obstacle(
+            player_position_center, position_obstacle, main_direction_vector
+        )
+        print("temp", temp)
+        factor = 10
+        output_left += factor * temp[0]
+        print("**output_left", output_left)
+        output_right += factor * temp[1]  # + output_right
+        print("**output_right", output_right)
+
+    class Move(enum.Enum):
+        north = [1, 0, 0, 0]
+        east = [0, 1, 0, 0]
+        south = [0, 0, 1, 0]
+        west = [0, 0, 0, 1]
+
+    if main_direction_vector == (1, 0):
+        instructions = Move.east.value
+        if output_left > output_right:
+            instructions[0] = 1
+        elif output_right > output_left:
+            instructions[2] = 1
+    elif main_direction_vector == (-1, 0):
+        instructions = Move.west.value
+        if output_left > output_right:
+            instructions[2] = 1
+        elif output_right > output_left:
+            instructions[0] = 1
+    elif main_direction_vector == (0, 1):
+        instructions = Move.south.value
+        if output_left > output_right:
+            instructions[3] = 1
+        elif output_right > output_left:
+            instructions[1] = 1
+    elif main_direction_vector == (0, -1):
+        instructions = Move.north.value
+        if output_left > output_right:
+            instructions[1] = 1
+        elif output_right > output_left:
+            instructions[3] = 1
+
+    print("instructions", instructions)
+
+    if len(perception_list[1]) > 0:
+        time.sleep(0.1)
+
+    return [instructions, current_step_index]
+
+
+def get_output_follow_line(
+    player_position_center, line_position, main_direction_vector
+):
+    if main_direction_vector[0] == 0:
+        # vertical line
+        distance_line_secondary_direction = line_position[0] - player_position_center[0]
+    elif main_direction_vector[1] == 0:
+        # horizontal line
+        distance_line_secondary_direction = line_position[1] - player_position_center[1]
+
+    print("distance_line_secondary_direction", distance_line_secondary_direction)
+
+    distance_line_left = max(0, distance_line_secondary_direction) / 15
+    distance_line_right = -min(0, distance_line_secondary_direction) / 15
+
+    print("distance_line_left", distance_line_left)
+    print("distance_line_right", distance_line_right)
+
+    output_left = 1 - distance_line_left
+    output_right = 1 - distance_line_right
+
+    print("output_left", output_left, "output_right", output_right)
+
+    return [output_left, output_right]
+
+
+def get_output_dodge_obstacle(
+    player_position_center, obstacle_position, main_direction_vector
+):
+
+    if main_direction_vector[0] == 0:
+        # vertical line
+        distance_obstacle = player_position_center[0] - obstacle_position[0]
+    elif main_direction_vector[1] == 0:
+        # horizontal line
+        distance_obstacle = player_position_center[1] - obstacle_position[1]
+
+    print("distance_obstacle", distance_obstacle)
+
+    if distance_obstacle > 0 and distance_obstacle < 16:
+        output_left = (distance_obstacle - 16) / 32
+        output_right = (distance_obstacle - 16) / 16
+        print("case 1")
+    elif distance_obstacle < 0 and distance_obstacle > -16:
+        output_left = (distance_obstacle + 16) / 16
+        output_right = (distance_obstacle + 16) / 32
+        print("case 2")
+    else:
+        output_left = 0
+        output_right = 0
+        print("case 3")
+
+    # scale_factor = 1 ((obstacle_position[0] + player_position_center[0]) ** 2) + (
+    #     (player_position_center[1] + obstacle_position[1]) ** 2
+    # )
+
+    # output_left = output_left / scale_factor
+    # output_right = output_right / scale_factor
+
+    return [output_left, output_right]
+
+
+def r4(line_position, obstacle_position, main_direction_vector):
+
+    if main_direction_vector[0] == 0:
+        # vertical line
+        distance_line_secondary_direction = line_position[0] - obstacle_position[0]
+    elif main_direction_vector[1] == 0:
+        # horizontal line
+        distance_line_secondary_direction = line_position[1] - obstacle_position[1]
+
+    if distance_line_secondary_direction > 0:
+        output_left = (distance_line_secondary_direction) / 25
+        output_right = 0
+    elif distance_line_secondary_direction < 0:
+        output_left = 0
+        output_right = (distance_line_secondary_direction + 16) / 16
+    else:
+        output_left = 0
+        output_right = 0
+
+    scale_factor = ((obstacle_position[0] + player_position_center[0]) ** 2) + (
+        (player_position_center[1] + obstacle_position[1]) ** 2
+    )
+
+    output_left = output_left / scale_factor
+    output_right = output_right / scale_factor
+
+    return [output_left, output_right]
 
 
 def do_planification():
