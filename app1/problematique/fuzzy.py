@@ -139,20 +139,26 @@ def get_movement_for_ai_fuzzy(
     item_list = perception_list[2]
     if len(item_list) > 0:
         item = item_list[0]
+        item_size = item[2]
 
-        instructions = [0, 0, 0, 0]  # up, right, down, left
-        if item[0] > player_position_center[0]:
-            instructions[1] = 1
-            print("item right")
-        elif item[0] < player_position_center[0]:
-            instructions[3] = 1
-            print("item left")
-        if item[1] > player_position_center[1]:
-            instructions[2] = 1
-            print("item down")
-        elif item[1] < player_position_center[1]:
-            instructions[0] = 1
-            print("item up")
+        # if player is in the same cell as the item
+        if (
+            current_step[0] == item[0] // tile_size
+            and current_step[1] == item[1] // tile_size
+        ):
+            instructions = [0, 0, 0, 0]  # up, right, down, left
+            if item[0] + item_size / 2 > player_position_center[0]:
+                instructions[1] = 1
+                print("item right")
+            elif item[0] + item_size / 2 < player_position_center[0]:
+                instructions[3] = 1
+                print("item left")
+            if item[1] + item_size / 2 > player_position_center[1]:
+                instructions[2] = 1
+                print("item down")
+            elif item[1] + item_size / 2 < player_position_center[1]:
+                instructions[0] = 1
+                print("item up")
 
     return [instructions, current_step_index]
 
