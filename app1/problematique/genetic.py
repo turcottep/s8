@@ -122,17 +122,19 @@ class Genetic:
     def get_best_individual(self):
         # Prints the best individual for all of the simulated generations
         # TODO : Decode individual for better readability
-        max_value = 2**self.nbits - 1
-        position = np.zeros((self.num_params,))
-        for j in range(self.num_params):
-            position[j] = (
-                np.sum(
-                    self.bestIndividual[j * self.nbits : (j + 1) * self.nbits]
-                    * 2 ** np.arange(self.nbits)
-                )
-                / max_value
-            )
-        return position
+
+        input_reshaped = self.bestIndividual.reshape(self.num_params, self.nbits)
+        # print("input reshaped", input_reshaped)
+        # print("input reshaped shape", input_reshaped.shape)
+
+        temp = bin2ufloat(input_reshaped, self.nbits)
+        # print("temp", temp.shape)
+
+        outpit = self.min_value + (self.max_value - self.min_value) * temp
+        # print("outpit", outpit)
+        # print("outpit shape", outpit.shape)
+
+        return outpit
 
     def encode_individuals(self):
         # Encode the population from a vector of continuous values to a binary string.
@@ -143,22 +145,17 @@ class Genetic:
         # - POPULATION, a binary matrix with each row encoding an individual.
         # TODO: encode individuals into binary vectors
         # self.population = np.zeros((self.pop_size, self.num_params * self.nbits))
-        max_value = 2**self.nbits - 1
+        # max_value = 2**self.nbits - 1
 
-        # print("decoded", self.cvalues)
+        print("decoded", self.cvalues)
 
         for i in range(self.pop_size):
-            for j in range(self.num_params):
-                self.population[i, j * self.nbits : (j + 1) * self.nbits] = np.array(
-                    [
-                        int(x)
-                        for x in bin(int(self.cvalues[i, j] * max_value))[2:].zfill(
-                            self.nbits
-                        )
-                    ]
-                )
+            self.population[i, :] = ufloat2bin(
+                self.cvalues, self.nbits * self.num_params
+            )
 
         print("coded", self.population)
+
         # print("nbits", self.nbits)
         raise Exception("Stop")
 
@@ -171,23 +168,28 @@ class Genetic:
         # - CVALUES, a vector of continuous values representing the parameters.
         # TODO: decode individuals from binary vectors
         # self.cvalues = np.zeros((self.pop_size, self.num_params))
-        max_binary_value = 2**self.nbits - 1
+        # max_binary_value = 2**self.nbits - 1
         for i in range(self.pop_size):
-            for j in range(self.num_params):
-                self.cvalues[i, j] = (
-                    self.min_value
-                    + (self.max_value - self.min_value)
-                    * np.sum(
-                        self.population[i, j * self.nbits : (j + 1) * self.nbits]
-                        * 2 ** np.arange(self.nbits)
-                    )
-                    / max_binary_value
-                )
-        # print("coded", self.population)
-        # print("nbits", self.nbits)
+            #
+            inpit = self.population[i, :]
+            # print("input", inpit)
+            # print("input shape", inpit.shape)
 
-        # print("decoded", self.cvalues)
-        # raise Exception("Stop")
+            input_reshaped = inpit.reshape(self.num_params, self.nbits)
+            # print("input reshaped", input_reshaped)
+            # print("input reshaped shape", input_reshaped.shape)
+
+            temp = bin2ufloat(input_reshaped, self.nbits)
+
+            # print("temp", temp)
+            # print("temp", temp.shape)
+
+            self.cvalues[i, :] = (
+                self.min_value + (self.max_value - self.min_value) * temp
+            )
+
+            # print("decoded", self.cvalues)
+            # print("decoded shape", self.cvalues.shape)
 
     def doSelection(self):
         # Select pairs of individuals from the population.
@@ -309,8 +311,8 @@ class Genetic:
 # - BVALUE, the binary representation of the continuous value. If CVALUES was a vector,
 #   the output is a matrix whose rows correspond to the elements of CVALUES.
 def ufloat2bin(cvalue, nbits):
-    if nbits > 64:
-        raise Exception("Maximum number of bits limited to 64")
+    # if nbits > 64:
+    #     raise Exception("Maximum number of bits limited to 64")
     ivalue = np.round(cvalue * (2**nbits - 1)).astype(np.uint64)
     bvalue = np.zeros((len(cvalue), nbits))
 
@@ -346,8 +348,8 @@ def ufloat2bin(cvalue, nbits):
 #   the output is a matrix whose rows correspond to the elements of CVALUES.
 #
 def bin2ufloat(bvalue, nbits):
-    if nbits > 64:
-        raise Exception("Maximum number of bits limited to 64")
+    # if nbits > 64:
+    #     raise Exception("Maximum number of bits limited to 64")
     ivalue = np.sum(bvalue * (2 ** np.arange(nbits)[np.newaxis, :]), axis=-1)
     cvalue = ivalue / (2**nbits - 1)
     return cvalue

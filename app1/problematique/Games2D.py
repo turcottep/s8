@@ -8,6 +8,7 @@ import pygame
 from Player import *
 from Maze import *
 from Constants import *
+from fuzzy import get_movement_for_ai_fuzzy
 from genetics_main import train_genetics
 from astar import astar
 import numpy as np
@@ -216,17 +217,23 @@ class App:
             )
         )
 
-        # for i in range(len(path) - 1):
-        #     live_cell = path[i]
-        #     next_cell = path[i + 1]
+        for i in range(len(path) - 1):
+            live_cell = path[i]
+            next_cell = path[i + 1]
 
-        #     pygame.draw.line(
-        #         self._display_surf,
-        #         (0, 0, 255),
-        #         (live_cell[0] * 50 + 25, live_cell[1] * 50 + 25),
-        #         (next_cell[0] * 50 + 25, next_cell[1] * 50 + 25),
-        #         2,
-        #     )
+            pygame.draw.line(
+                self._display_surf,
+                (0, 0, 255),
+                (
+                    (live_cell[0] + 0.5) * self.maze.tile_size_x,
+                    (live_cell[1] + 0.5) * self.maze.tile_size_y,
+                ),
+                (
+                    (next_cell[0] + 0.5) * self.maze.tile_size_x,
+                    (next_cell[1] + 0.5) * self.maze.tile_size_y,
+                ),
+                2,
+            )
 
         for i in range(len(path_simplified) - 1):
             live_cell = path_simplified[i]
@@ -235,8 +242,14 @@ class App:
             pygame.draw.line(
                 self._display_surf,
                 (255, 100, 255),
-                (live_cell[0] * 50 + 25, live_cell[1] * 50 + 25),
-                (next_cell[0] * 50 + 25, next_cell[1] * 50 + 25),
+                (
+                    (live_cell[0] + 0.5) * self.maze.tile_size_x + 2,
+                    (live_cell[1] + 0.5) * self.maze.tile_size_y + 2,
+                ),
+                (
+                    (next_cell[0] + 0.5) * self.maze.tile_size_x + 2,
+                    (next_cell[1] + 0.5) * self.maze.tile_size_y + 2,
+                ),
                 2,
             )
 
@@ -263,8 +276,8 @@ class App:
     def on_execute(self):
         self.on_init()
 
-        [path, path_simplified] = do_planification(self.maze)
         best_attributes = do_genetics(self.player, self.maze.monsterList)
+        [path, path_simplified] = do_planification(self.maze)
         original_monster_list = []
         for monster in self.maze.monsterList:
             original_monster_list.append(monster)
@@ -288,12 +301,24 @@ class App:
                     best_attributes=best_attributes,
                 )
 
-            [key_to_press_for_AI, step_index] = get_movement_for_ai(
+            # [key_to_press_for_AI, step_index] = get_movement_for_ai(
+            #     path,
+            #     self.player,
+            #     self.maze.make_perception_list(self.player, self._display_surf),
+            #     step_index,
+            #     self.maze,
+            # )
+
+            [key_to_press_for_AI, step_index] = get_movement_for_ai_fuzzy(
                 path,
                 self.player.get_position(),
                 self.maze.make_perception_list(self.player, self._display_surf),
                 step_index,
+                self.player.get_rect()[2],
+                self.maze.tile_size_x,
+                obs_size=8,
             )
+
             self.on_AI_input(key_to_press_for_AI)  # A décommenter pour utiliser l'IA
             if self.on_coin_collision():
                 self.score += 1
@@ -326,7 +351,13 @@ class App:
         self.on_cleanup()
 
 
-def fuzzyfication(closest_obs, current_step_position_center, main_direction_vector):
+def fuzzyfication(
+    closest_obs,
+    current_step_position_center,
+    main_direction_vector,
+    size_player,
+    size_obs,
+):
     overlap_left = 0
     overlap_right = 0
     if closest_obs:
@@ -334,26 +365,32 @@ def fuzzyfication(closest_obs, current_step_position_center, main_direction_vect
             # vertical line
             overlap_left = max(
                 0,
-                min(current_step_position_center[0], closest_obs[0] + 10)
-                - max(current_step_position_center[0] - 10, closest_obs[0]),
+                min(current_step_position_center[0], closest_obs[0] + size_obs)
+                - max(current_step_position_center[0] - size_player, closest_obs[0]),
             )
 
             overlap_right = max(
                 0,
-                min(current_step_position_center[0] + 10, closest_obs[0] + 10)
+                min(
+                    current_step_position_center[0] + size_player,
+                    closest_obs[0] + size_obs,
+                )
                 - max(current_step_position_center[0], closest_obs[0]),
             )
         elif main_direction_vector[1] == 0:
             # horizontal line
             overlap_left = max(
                 0,
-                min(current_step_position_center[1], closest_obs[1] + 10)
-                - max(current_step_position_center[1] - 10, closest_obs[1]),
+                min(current_step_position_center[1], closest_obs[1] + size_obs)
+                - max(current_step_position_center[1] - size_player, closest_obs[1]),
             )
 
             overlap_right = max(
                 0,
-                min(current_step_position_center[1] + 10, closest_obs[1] + 10)
+                min(
+                    current_step_position_center[1] + size_player,
+                    closest_obs[1] + size_obs,
+                )
                 - max(current_step_position_center[1], closest_obs[1]),
             )
 
@@ -420,12 +457,21 @@ def defuzzification(main_direction_vector, secondary_instruction):
     return instructions
 
 
-def get_movement_for_ai(path, player_position, perception_list, current_step_index):
-    player_position_center = (player_position[0] + 10, player_position[1] + 10)
+def get_movement_for_ai(path, player, perception_list, current_step_index, maze):
+
+    print("player rect", player.get_rect())
+    player_size_x = player.get_rect()[2]
+    player_size_y = player.get_rect()[3]
+
+    player_position = player.get_position()
+    player_position_center = (
+        player_position[0] + player_size_x / 2,
+        player_position[1] + player_size_y / 2,
+    )
 
     player_position_cell_i_j = (
-        player_position[0] // 50,
-        player_position[1] // 50,
+        player_position[0] // maze.tile_size_x,
+        player_position[1] // maze.tile_size_y,
     )
 
     main_direction_vector = (
@@ -434,30 +480,46 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     )
 
     if main_direction_vector[0] == 1:
-        if player_position_center[0] >= path[current_step_index + 1][0] * 50 + 25:
+        if (
+            player_position_center[0]
+            >= (path[current_step_index + 1][0] + 0.5) * maze.tile_size_x
+        ):
             current_step_index += 1
     elif main_direction_vector[0] == -1:
-        if player_position_center[0] <= path[current_step_index + 1][0] * 50 + 25:
+        if (
+            player_position_center[0]
+            <= (path[current_step_index + 1][0] + 0.5) * maze.tile_size_x
+        ):
             current_step_index += 1
     elif main_direction_vector[1] == 1:
-        if player_position_center[1] >= path[current_step_index + 1][1] * 50 + 25:
+        if (
+            player_position_center[1]
+            >= (path[current_step_index + 1][1] + 0.5) * maze.tile_size_y
+        ):
             current_step_index += 1
     elif main_direction_vector[1] == -1:
-        if player_position_center[1] <= path[current_step_index + 1][1] * 50 + 25:
+        if (
+            player_position_center[1]
+            <= (path[current_step_index + 1][1] + 0.5) * maze.tile_size_y
+        ):
             current_step_index += 1
 
     current_step = path[current_step_index]
     current_step_position_center = (
-        current_step[0] * 50 + 25,
-        current_step[1] * 50 + 25,
+        (current_step[0] + 0.5) * maze.tile_size_x,
+        (current_step[1] + 0.5) * maze.tile_size_y,
     )
     next_step = path[current_step_index + 1]
-    next_step_position = (next_step[0] * 50 + 25, next_step[1] * 50 + 25)
+    next_step_position = (
+        (next_step[0] + 0.5) * maze.tile_size_x,
+        (next_step[1] + 0.5) * maze.tile_size_x,
+    )
 
     main_direction_vector = (
         next_step[0] - current_step[0],
         next_step[1] - current_step[1],
     )
+
     # print("path", path)
     # print("current_step_index", current_step_index)
     # print("current_step", current_step)
@@ -481,7 +543,14 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     # get the closest obstacle in front of the player
     closest_obs = None
     min_distance = 100000000
+    obs_size_x = 8
+
     for obstacle in obstacle_list:
+        print("obstacle", obstacle)
+        obs_size_x = obstacle[2]
+        print("obs_size_x", obs_size_x)
+        obs_size_y = obstacle[3]
+
         if main_direction_vector[0] == 1:
             # vertical line
             if obstacle[0] + 5 < player_position_center[0] - main_direction_vector[
@@ -523,7 +592,11 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     print("line position", next_step_position)
 
     [overlap_left, overlap_right] = fuzzyfication(
-        closest_obs, current_step_position_center, main_direction_vector
+        closest_obs,
+        current_step_position_center,
+        main_direction_vector,
+        player_size_x,
+        obs_size_x,
     )
 
     fuzzy_output = fuzzy_rules(overlap_left, overlap_right, distance_from_line)
@@ -532,8 +605,10 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     print("instructions", instructions)
 
     # get item, override instructions
+    item_list = perception_list[2]
     if len(item_list) > 0:
         item = item_list[0]
+
         instructions = [0, 0, 0, 0]  # up, right, down, left
         if item[0] > player_position_center[0]:
             instructions[1] = 1
@@ -551,59 +626,642 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     return [instructions, current_step_index]
 
 
-def do_planification_v1():
+def do_planification(maze):
 
-    planif = [
+    path_simplified = [
+        (1, 0),
+        (1, 5),
+        (2, 5),
+        (2, 6),
+        (5, 10),
+        (6, 1),
+        (7, 1),
+        (8, 1),
+        (10, 1),
+        (9, 4),
+        (9, 3),
+        (10, 3),
+        (10, 4),
+        (9, 8),
+        (7, 10),
+        (7, 16),
+        (7, 20),
+        (5, 17),
+        (5, 16),
+        (3, 14),
+        (1, 14),
+        (1, 11),
+        (1, 10),
+        (1, 9),
+        (1, 8),
+        (1, 7),
+        (5, 12),
+        (1, 18),
+        (3, 19),
+        (3, 20),
+        (5, 20),
+        (4, 21),
+        (4, 22),
+        (5, 22),
+        (1, 21),
+        (1, 22),
+        (2, 22),
+        (12, 10),
+        (12, 18),
+        (9, 16),
+        (10, 16),
+        (10, 17),
+        (15, 1),
+        (17, 1),
+        (17, 2),
+        (19, 2),
+        (19, 1),
+        (21, 1),
+        (22, 1),
+        (29, 4),
+        (29, 6),
+        (30, 6),
+        (29, 8),
+        (30, 8),
+        (29, 10),
+        (29, 13),
+        (24, 9),
+        (24, 6),
+        (18, 6),
+        (16, 7),
+        (16, 10),
+        (18, 15),
+        (14, 11),
+        (14, 10),
+        (14, 7),
+        (14, 6),
+        (16, 4),
+        (19, 4),
+        (14, 16),
+        (18, 17),
+        (16, 17),
+        (16, 16),
+        (16, 15),
+        (28, 22),
+        (27, 21),
+        (25, 21),
+        (23, 21),
+        (21, 21),
+        (20, 22),
+        (22, 22),
+        (24, 22),
+        (26, 22),
+        (16, 22),
+        (16, 21),
+        (14, 21),
+        (14, 22),
+        (22, 11),
+    ]
+    path = [
         (1, 0),
         (1, 1),
         (1, 2),
         (1, 3),
         (1, 4),
         (1, 5),
-        (1, 6),
-        (1, 7),
-        (2, 7),
-        (3, 7),
-        (4, 7),
-        (4, 8),
-        (4, 9),
+        (2, 5),
+        (2, 6),
+        (3, 6),
+        (4, 6),
+        (5, 6),
+        (5, 7),
+        (5, 8),
         (5, 9),
-        (6, 9),
-        (7, 9),
-        (8, 9),
+        (5, 10),
+        (5, 9),
+        (5, 8),
+        (5, 7),
+        (5, 6),
+        (6, 6),
+        (6, 5),
+        (6, 4),
+        (6, 3),
+        (6, 2),
+        (6, 1),
+        (7, 1),
+        (8, 1),
+        (9, 1),
+        (10, 1),
+        (9, 1),
+        (8, 1),
+        (7, 1),
+        (6, 1),
+        (6, 2),
+        (6, 3),
+        (6, 4),
+        (7, 4),
+        (8, 4),
+        (9, 4),
+        (9, 3),
+        (10, 3),
+        (10, 4),
+        (9, 4),
+        (8, 4),
+        (7, 4),
+        (6, 4),
+        (6, 5),
+        (6, 6),
+        (7, 6),
+        (8, 6),
+        (9, 6),
+        (9, 7),
+        (9, 8),
         (9, 9),
         (9, 10),
-        (9, 11),
-        (10, 11),
-        (11, 11),
+        (8, 10),
+        (7, 10),
+        (7, 11),
+        (7, 12),
+        (7, 13),
+        (7, 14),
+        (7, 15),
+        (7, 16),
+        (7, 17),
+        (7, 18),
+        (7, 19),
+        (7, 20),
+        (7, 19),
+        (7, 18),
+        (6, 18),
+        (5, 18),
+        (5, 17),
+        (5, 16),
+        (5, 17),
+        (5, 18),
+        (6, 18),
+        (7, 18),
+        (7, 17),
+        (7, 16),
+        (7, 15),
+        (7, 14),
+        (6, 14),
+        (5, 14),
+        (4, 14),
+        (3, 14),
+        (2, 14),
+        (1, 14),
+        (1, 13),
+        (1, 12),
+        (1, 11),
+        (1, 10),
+        (1, 9),
+        (1, 8),
+        (1, 7),
+        (1, 8),
+        (1, 9),
+        (1, 10),
+        (1, 11),
+        (1, 12),
+        (2, 12),
+        (3, 12),
+        (4, 12),
+        (5, 12),
+        (4, 12),
+        (3, 12),
+        (2, 12),
+        (1, 12),
+        (1, 13),
+        (1, 14),
+        (2, 14),
+        (3, 14),
+        (3, 15),
+        (3, 16),
+        (2, 16),
+        (1, 16),
+        (1, 17),
+        (1, 18),
+        (2, 18),
+        (2, 19),
+        (3, 19),
+        (3, 20),
+        (4, 20),
+        (5, 20),
+        (4, 20),
+        (4, 21),
+        (4, 22),
+        (5, 22),
+        (4, 22),
+        (4, 21),
+        (4, 20),
+        (3, 20),
+        (2, 20),
+        (2, 21),
+        (1, 21),
+        (1, 22),
+        (2, 22),
+        (2, 21),
+        (2, 20),
+        (2, 19),
+        (2, 18),
+        (1, 18),
+        (1, 17),
+        (1, 16),
+        (2, 16),
+        (3, 16),
+        (3, 15),
+        (3, 14),
+        (4, 14),
+        (5, 14),
+        (6, 14),
+        (7, 14),
+        (7, 13),
+        (8, 13),
+        (9, 13),
+        (10, 13),
+        (11, 13),
+        (12, 13),
+        (12, 12),
         (12, 11),
-        (13, 11),
-        (13, 12),
-        (13, 13),
+        (12, 10),
+        (12, 11),
+        (12, 12),
+        (12, 13),
+        (12, 14),
+        (12, 15),
+        (12, 16),
+        (12, 17),
+        (12, 18),
+        (12, 19),
+        (11, 19),
+        (10, 19),
+        (9, 19),
+        (9, 18),
+        (9, 17),
+        (9, 16),
+        (10, 16),
+        (10, 17),
+        (9, 17),
+        (9, 18),
+        (9, 19),
+        (10, 19),
+        (11, 19),
+        (12, 19),
+        (12, 18),
+        (12, 17),
+        (12, 16),
+        (12, 15),
+        (12, 14),
+        (12, 13),
+        (12, 12),
+        (12, 11),
+        (12, 10),
+        (12, 9),
+        (12, 8),
+        (11, 8),
+        (10, 8),
+        (9, 8),
+        (9, 7),
+        (9, 6),
+        (10, 6),
+        (11, 6),
+        (12, 6),
+        (12, 5),
+        (12, 4),
+        (12, 3),
+        (12, 2),
+        (13, 2),
+        (14, 2),
+        (15, 2),
+        (15, 1),
+        (16, 1),
+        (17, 1),
+        (17, 2),
+        (18, 2),
+        (19, 2),
+        (19, 1),
+        (20, 1),
+        (21, 1),
+        (22, 1),
+        (22, 2),
+        (23, 2),
+        (24, 2),
+        (25, 2),
+        (26, 2),
+        (27, 2),
+        (28, 2),
+        (29, 2),
+        (30, 2),
+        (30, 3),
+        (30, 4),
+        (29, 4),
+        (28, 4),
+        (28, 5),
+        (28, 6),
+        (29, 6),
+        (30, 6),
+        (29, 6),
+        (28, 6),
+        (28, 7),
+        (28, 8),
+        (29, 8),
+        (30, 8),
+        (29, 8),
+        (28, 8),
+        (28, 9),
+        (28, 10),
+        (29, 10),
+        (30, 10),
+        (30, 11),
+        (30, 12),
+        (30, 13),
+        (29, 13),
+        (28, 13),
+        (27, 13),
+        (26, 13),
+        (25, 13),
+        (24, 13),
+        (24, 12),
+        (24, 11),
+        (24, 10),
+        (24, 9),
+        (24, 8),
+        (24, 7),
+        (24, 6),
+        (23, 6),
+        (22, 6),
+        (21, 6),
+        (20, 6),
+        (19, 6),
+        (18, 6),
+        (17, 6),
+        (16, 6),
+        (16, 7),
+        (16, 8),
+        (16, 9),
+        (16, 10),
+        (16, 9),
+        (16, 8),
+        (16, 7),
+        (16, 6),
+        (17, 6),
+        (18, 6),
+        (19, 6),
+        (20, 6),
+        (21, 6),
+        (22, 6),
+        (23, 6),
+        (24, 6),
+        (24, 7),
+        (24, 8),
+        (24, 9),
+        (24, 10),
+        (24, 11),
+        (24, 12),
+        (24, 13),
+        (23, 13),
+        (22, 13),
+        (21, 13),
+        (20, 13),
+        (19, 13),
+        (18, 13),
+        (18, 14),
+        (18, 15),
+        (18, 14),
+        (18, 13),
+        (17, 13),
+        (16, 13),
+        (15, 13),
+        (14, 13),
+        (14, 12),
+        (14, 11),
+        (14, 10),
+        (14, 9),
+        (14, 8),
+        (14, 7),
+        (14, 6),
+        (14, 5),
+        (14, 4),
+        (15, 4),
+        (16, 4),
+        (17, 4),
+        (18, 4),
+        (19, 4),
+        (18, 4),
+        (17, 4),
+        (16, 4),
+        (15, 4),
+        (14, 4),
+        (14, 5),
+        (14, 6),
+        (14, 7),
+        (14, 8),
+        (14, 9),
+        (14, 10),
+        (14, 11),
+        (14, 12),
+        (14, 13),
+        (14, 14),
+        (14, 15),
+        (14, 16),
+        (14, 17),
+        (14, 18),
+        (14, 19),
+        (15, 19),
+        (16, 19),
+        (17, 19),
+        (18, 19),
+        (19, 19),
+        (20, 19),
+        (21, 19),
+        (22, 19),
+        (23, 19),
+        (24, 19),
+        (25, 19),
+        (25, 18),
+        (25, 17),
+        (24, 17),
+        (23, 17),
+        (22, 17),
+        (21, 17),
+        (20, 17),
+        (19, 17),
+        (18, 17),
+        (17, 17),
+        (16, 17),
+        (16, 16),
+        (16, 15),
+        (16, 16),
+        (16, 17),
+        (17, 17),
+        (18, 17),
+        (19, 17),
+        (20, 17),
+        (20, 16),
+        (20, 15),
+        (21, 15),
+        (22, 15),
+        (23, 15),
+        (24, 15),
+        (25, 15),
+        (26, 15),
+        (27, 15),
+        (28, 15),
+        (29, 15),
+        (30, 15),
+        (30, 16),
+        (30, 17),
+        (30, 18),
+        (30, 19),
+        (30, 20),
+        (30, 21),
+        (30, 22),
+        (29, 22),
+        (28, 22),
+        (27, 22),
+        (27, 21),
+        (26, 21),
+        (25, 21),
+        (24, 21),
+        (23, 21),
+        (22, 21),
+        (21, 21),
+        (20, 21),
+        (20, 22),
+        (21, 22),
+        (22, 22),
+        (23, 22),
+        (24, 22),
+        (25, 22),
+        (26, 22),
+        (25, 22),
+        (24, 22),
+        (23, 22),
+        (22, 22),
+        (21, 22),
+        (20, 22),
+        (19, 22),
+        (18, 22),
+        (17, 22),
+        (16, 22),
+        (16, 21),
+        (15, 21),
+        (14, 21),
+        (14, 22),
+        (14, 21),
+        (15, 21),
+        (16, 21),
+        (17, 21),
+        (18, 21),
+        (19, 21),
+        (20, 21),
+        (21, 21),
+        (22, 21),
+        (23, 21),
+        (24, 21),
+        (25, 21),
+        (26, 21),
+        (27, 21),
+        (28, 21),
+        (28, 20),
+        (28, 19),
+        (27, 19),
+        (27, 18),
+        (27, 17),
+        (28, 17),
+        (29, 17),
+        (30, 17),
+        (30, 16),
+        (30, 15),
+        (29, 15),
+        (28, 15),
+        (27, 15),
+        (26, 15),
+        (25, 15),
+        (24, 15),
+        (23, 15),
+        (22, 15),
+        (21, 15),
+        (20, 15),
+        (20, 16),
+        (20, 17),
+        (21, 17),
+        (22, 17),
+        (23, 17),
+        (24, 17),
+        (25, 17),
+        (25, 18),
+        (25, 19),
+        (24, 19),
+        (23, 19),
+        (22, 19),
+        (21, 19),
+        (20, 19),
+        (19, 19),
+        (18, 19),
+        (17, 19),
+        (16, 19),
+        (15, 19),
+        (14, 19),
+        (14, 18),
+        (14, 17),
+        (14, 16),
+        (14, 15),
+        (14, 14),
         (14, 13),
         (15, 13),
         (16, 13),
         (17, 13),
-        (17, 14),
-        (18, 14),
-        (19, 14),
-        (20, 14),
-        (21, 14),
-        (22, 14),
-        (22, 15),
+        (18, 13),
+        (19, 13),
+        (20, 13),
+        (21, 13),
+        (22, 13),
+        (23, 13),
+        (24, 13),
+        (24, 12),
+        (24, 11),
+        (24, 10),
+        (24, 9),
+        (24, 8),
+        (24, 7),
+        (24, 6),
+        (23, 6),
+        (22, 6),
+        (21, 6),
+        (20, 6),
+        (19, 6),
+        (18, 6),
+        (17, 6),
+        (16, 6),
+        (16, 7),
+        (16, 8),
+        (16, 9),
+        (16, 10),
+        (16, 11),
+        (17, 11),
+        (18, 11),
+        (19, 11),
+        (20, 11),
+        (20, 10),
+        (20, 9),
+        (20, 8),
+        (21, 8),
+        (22, 8),
+        (22, 9),
+        (22, 10),
+        (22, 11),
     ]
 
-    # A-star
-    starting_positon = (1, 0)
-    ending_position = (22, 15)
+    # # A-star
+    # starting_positon = (1, 0)
+    # ending_position = (22, 15)
 
-    path = astar(starting_positon, ending_position)
-    print("path", path)
-    return path
+    # path = astar(starting_positon, ending_position)
+    # print("path", path)
+    return [path, path_simplified]
 
 
-def do_planification(maze):
+def do_planification_full(maze):
     # print("maze", maze.maze)
+
+    # start timer
+    start_time = time.time()
+
     # # A-star
     starting_positon = None
     ending_position = None
@@ -628,7 +1286,7 @@ def do_planification(maze):
 
     # print("weigth_matrix", weigth_matrix)
     all_points = [starting_positon] + points_to_visit + [ending_position]
-    weigth_matrix = djikstra(all_points)
+    weigth_matrix = brushfire(all_points)
 
     # find the shortest path
     path_simplified_index = shortest_path(weigth_matrix)
@@ -653,6 +1311,10 @@ def do_planification(maze):
     print("path", path)
 
     # raise Exception("stop")
+
+    # end timer
+    end_time = time.time()
+    print("time for path_planning", end_time - start_time, "seconds")
 
     return [path, path_simplified]
 
@@ -683,7 +1345,7 @@ class Node:
         return self.f > other.f
 
 
-def djikstra(all_points):
+def brushfire(all_points):
 
     with PrologMQI() as mqi:
         with PrologMQI() as mqi_file:
@@ -699,6 +1361,8 @@ def djikstra(all_points):
 
                 # fill the matrix with the taxi distance
                 for i, point1 in enumerate(all_points):
+
+                    print(i, "/", len(all_points), "calculating distances from", point1)
                     # for i in range(1):
                     point1 = all_points[i]
 
@@ -716,7 +1380,7 @@ def djikstra(all_points):
                     while len(open_list) > 0:
 
                         current_node = heapq.heappop(open_list)
-                        print("current_node is", current_node)
+                        # print("current_node is", current_node)
 
                         closed_list.append(current_node)
 
@@ -771,7 +1435,7 @@ def djikstra(all_points):
 
                             heapq.heappush(open_list, child)
 
-                    print("closed_list", closed_list)
+                    # print("closed_list", closed_list)
 
                     for node in closed_list:
                         if node.position in all_points:
@@ -810,6 +1474,7 @@ def shortest_path(weigth_matrix):
 
 
 def check_for_incoming_monster_to_set_stats(player, monster_list, best_attributes):
+
     min_distance = 1000000000
     monster_index = 0
     # print("monster_list", monster_list)
@@ -841,18 +1506,43 @@ best_of_the_best = []
 def genetics_fitness_function(player, monster, attributes):
     print("attributes", attributes.shape)
     fitness = np.zeros((attributes.shape[0],))
+    best_score = 0
     for i in range(attributes.shape[0]):
         attributes_i = attributes[i, :]
+        # attributes_i = [
+        #     452.81147478,
+        #     -970.39749752,
+        #     -606.8970779,
+        #     213.36690318,
+        #     806.66819257,
+        #     -940.764477,
+        #     165.20943008,
+        #     -447.22667277,
+        #     -515.64812696,
+        #     -606.56137942,
+        #     914.61051347,
+        #     -788.26581216,
+        # ]
+        print("attributes_i", attributes_i)
+        for j, attribute in enumerate(attributes_i):
+            if attribute < -MAX_ATTRIBUTE:
+                print("attribute", attribute, "is too low")
+            if attribute > MAX_ATTRIBUTE:
+                print("attribute", attribute, "is too high")
+
         player.set_attributes(attributes_i)
         results = monster.mock_fight(player)
         # print("results", results)
         fitness[i] = results[1]
+        if results[0] > best_score:
+            best_score = results[0]
         if results[0] == 4:
             print("win")
             print("winning attributes", attributes_i)
             global best_of_the_best
             best_of_the_best = attributes_i
-    print("fitness", fitness.shape)
+    # print("fitness", fitness.shape)
+    print("best_score", best_score)
     return fitness
 
 
@@ -861,9 +1551,17 @@ def quick_genetics(player, monster, attributes):
     fitness = np.zeros((attributes.shape[0],))
     for i in range(attributes.shape[0]):
         attributes_i = attributes[i, :]
+        # print("attributes_i", attributes_i)
+        # validate attributes
+        # for j, attribute in enumerate(attributes_i):
+        #     if attribute < -MAX_ATTRIBUTE:
+        #         print("attribute", attribute, "is too low")
+        #     if attribute > MAX_ATTRIBUTE:
+        #         print("attribute", attribute, "is too high")
         player.set_attributes(attributes_i)
         results = monster.mock_fight(player)
-        # print("results", results)
+        # results = (0, 1.5)
+        print("results", results)
         fitness[i] = results[1]
         if results[0] == 4:
             print("win")
@@ -877,6 +1575,7 @@ def do_genetics(player, monsterList):
     start = time.time()
 
     # print("training genetics to fight...: \n\n")
+    print("monsterList", monsterList)
 
     pop_size = 1000
     nb_bits = 64
@@ -887,7 +1586,7 @@ def do_genetics(player, monsterList):
     max_binary_value = 2**nb_bits - 1
 
     while True:
-
+        print("new generation")
         # taux de mutation à 100%
         population = np.random.randint(0, 2, (pop_size, NUM_ATTRIBUTES * nb_bits))
         # print("population", population.shape)
@@ -906,25 +1605,26 @@ def do_genetics(player, monsterList):
 
         got_perfect_attributes_temp = True
         for i, monster in enumerate(monsterList):
-            best_attributes.append(quick_genetics(player, monster, cvalues))
-            # print("best_attributes", best_attributes)
-            player.set_attributes(best_attributes[i])
-            results = monster.mock_fight(player)
-            if results[0] != 4:
+            best_attributes_i = quick_genetics(player, monster, cvalues)
+            if best_attributes_i is None:
                 got_perfect_attributes_temp = False
-            # print("results best_attributes", results)
+            else:
+                best_attributes.append(quick_genetics(player, monster, cvalues))
+                print("best_attributes", best_attributes)
+                player.set_attributes(best_attributes[i])
+                results = monster.mock_fight(player)
+
+                print("results best_attributes", results)
 
         if got_perfect_attributes_temp:
             break
 
-    # pop_size = 10
-    # nb_bits = 64
     # monster = monsterList[0]
 
     # best_genetics = train_genetics(
     #     lambda x: genetics_fitness_function(player, monster, x),
     #     NUM_ATTRIBUTES,
-    #     0,
+    #     -MAX_ATTRIBUTE,
     #     MAX_ATTRIBUTE,
     # )
     # player.set_attributes(best_genetics)
@@ -933,6 +1633,11 @@ def do_genetics(player, monsterList):
 
     # end timer
     end = time.time()
-    # print("time to train genetics", end - start, "seconds")
+    print("time to train genetics", end - start, "seconds")
+
+    # raise Exception("done")
 
     return best_attributes
+
+
+# fuzzy logic for real

@@ -42,16 +42,16 @@ def train_genetics(fitness_function, numparams, min_param_value, max_param_value
     # The parameters for encoding the population
 
     # TODO: adjust population size and encoding precision
-    popsize = 100  # 40
-    nbits = 64  # 16
+    popsize = 1000  # 40
+    nbits = 16  # 16
     ga_sim = genetic.Genetic(numparams, popsize, nbits)
     ga_sim.init_pop()
     ga_sim.set_fit_fun(fitness_function)
 
     # TODO: Adjust optimization meta-parameters
-    numGenerations = 10  # 15
+    numGenerations = 100  # 15
     mutationProb = 0.01  # 0.01
-    crossoverProb = 0.5  # 0.8
+    crossoverProb = 0.8  # 0.8
 
     ga_sim.set_sim_parameters(
         numGenerations, mutationProb, crossoverProb, min_param_value, max_param_value

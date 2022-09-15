@@ -9,5 +9,5 @@ if __name__ == "__main__":
     # Niveau 1 - avec obstacles - 'assets/mazeMedium_1'
     # Niveau 2 - avec obstacles et ennemis - 'assets/mazeMedium_2'
 
-    theAPP = App("assets/mazeMedium_3")
+    theAPP = App("assets/mazeLarge_3")
     theAPP.on_execute()
