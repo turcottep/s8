@@ -8,6 +8,7 @@ import pygame
 from Player import *
 from Maze import *
 from Constants import *
+from fuzzy import get_movement_for_ai_fuzzy
 from genetics_main import train_genetics
 from astar import astar
 import numpy as np
@@ -288,12 +289,20 @@ class App:
                     best_attributes=best_attributes,
                 )
 
-            [key_to_press_for_AI, step_index] = get_movement_for_ai(
+            # [key_to_press_for_AI, step_index] = get_movement_for_ai(
+            #     path,
+            #     self.player.get_position(),
+            #     self.maze.make_perception_list(self.player, self._display_surf),
+            #     step_index,
+            # )
+
+            [key_to_press_for_AI, step_index] = get_movement_for_ai_fuzzy(
                 path,
                 self.player.get_position(),
                 self.maze.make_perception_list(self.player, self._display_surf),
                 step_index,
             )
+
             self.on_AI_input(key_to_press_for_AI)  # A décommenter pour utiliser l'IA
             if self.on_coin_collision():
                 self.score += 1
@@ -458,6 +467,7 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
         next_step[0] - current_step[0],
         next_step[1] - current_step[1],
     )
+
     # print("path", path)
     # print("current_step_index", current_step_index)
     # print("current_step", current_step)
@@ -532,8 +542,10 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     print("instructions", instructions)
 
     # get item, override instructions
+    item_list = perception_list[2]
     if len(item_list) > 0:
         item = item_list[0]
+
         instructions = [0, 0, 0, 0]  # up, right, down, left
         if item[0] > player_position_center[0]:
             instructions[1] = 1
@@ -551,9 +563,9 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     return [instructions, current_step_index]
 
 
-def do_planification_v1():
+def do_planification(maze):
 
-    planif = [
+    path = [
         (1, 0),
         (1, 1),
         (1, 2),
@@ -562,8 +574,216 @@ def do_planification_v1():
         (1, 5),
         (1, 6),
         (1, 7),
+        (1, 8),
+        (1, 9),
+        (1, 10),
+        (1, 11),
+        (1, 12),
+        (1, 13),
+        (1, 14),
+        (1, 13),
+        (1, 12),
+        (1, 11),
+        (1, 10),
+        (1, 9),
+        (1, 8),
+        (1, 7),
         (2, 7),
         (3, 7),
+        (4, 7),
+        (4, 8),
+        (4, 9),
+        (4, 10),
+        (4, 11),
+        (4, 12),
+        (4, 13),
+        (4, 14),
+        (4, 13),
+        (4, 12),
+        (4, 11),
+        (4, 10),
+        (4, 9),
+        (5, 9),
+        (6, 9),
+        (7, 9),
+        (8, 9),
+        (9, 9),
+        (9, 10),
+        (9, 11),
+        (10, 11),
+        (11, 11),
+        (12, 11),
+        (13, 11),
+        (13, 12),
+        (13, 13),
+        (14, 13),
+        (15, 13),
+        (15, 12),
+        (15, 11),
+        (15, 12),
+        (15, 13),
+        (14, 13),
+        (13, 13),
+        (13, 14),
+        (12, 14),
+        (11, 14),
+        (11, 13),
+        (11, 14),
+        (10, 14),
+        (9, 14),
+        (8, 14),
+        (8, 13),
+        (8, 14),
+        (9, 14),
+        (10, 14),
+        (11, 14),
+        (12, 14),
+        (13, 14),
+        (14, 14),
+        (14, 13),
+        (15, 13),
+        (16, 13),
+        (17, 13),
+        (17, 14),
+        (18, 14),
+        (19, 14),
+        (20, 14),
+        (21, 14),
+        (21, 13),
+        (21, 12),
+        (22, 12),
+        (22, 11),
+        (22, 10),
+        (21, 10),
+        (21, 9),
+        (21, 10),
+        (22, 10),
+        (22, 11),
+        (22, 12),
+        (21, 12),
+        (21, 13),
+        (21, 14),
+        (20, 14),
+        (19, 14),
+        (18, 14),
+        (17, 14),
+        (17, 13),
+        (16, 13),
+        (15, 13),
+        (14, 13),
+        (13, 13),
+        (13, 12),
+        (13, 11),
+        (12, 11),
+        (11, 11),
+        (10, 11),
+        (9, 11),
+        (9, 10),
+        (9, 9),
+        (8, 9),
+        (7, 9),
+        (6, 9),
+        (5, 9),
+        (4, 9),
+        (4, 8),
+        (4, 7),
+        (4, 6),
+        (4, 5),
+        (4, 4),
+        (4, 3),
+        (4, 2),
+        (4, 1),
+        (5, 1),
+        (6, 1),
+        (7, 1),
+        (8, 1),
+        (9, 1),
+        (9, 2),
+        (9, 3),
+        (9, 4),
+        (9, 5),
+        (9, 6),
+        (9, 7),
+        (10, 7),
+        (11, 7),
+        (12, 7),
+        (13, 7),
+        (13, 6),
+        (13, 5),
+        (13, 4),
+        (13, 3),
+        (13, 2),
+        (13, 1),
+        (13, 2),
+        (13, 3),
+        (13, 4),
+        (14, 4),
+        (15, 4),
+        (16, 4),
+        (17, 4),
+        (18, 4),
+        (19, 4),
+        (20, 4),
+        (19, 4),
+        (19, 5),
+        (19, 6),
+        (20, 6),
+        (19, 6),
+        (19, 5),
+        (19, 4),
+        (18, 4),
+        (17, 4),
+        (17, 3),
+        (17, 2),
+        (18, 2),
+        (19, 2),
+        (20, 2),
+        (20, 1),
+        (21, 1),
+        (21, 2),
+        (22, 2),
+        (22, 3),
+        (22, 4),
+        (22, 5),
+        (22, 6),
+        (22, 7),
+        (22, 6),
+        (22, 5),
+        (22, 4),
+        (22, 3),
+        (22, 2),
+        (21, 2),
+        (20, 2),
+        (19, 2),
+        (18, 2),
+        (17, 2),
+        (17, 3),
+        (17, 4),
+        (16, 4),
+        (15, 4),
+        (15, 5),
+        (15, 6),
+        (15, 7),
+        (15, 8),
+        (15, 9),
+        (15, 8),
+        (15, 7),
+        (15, 6),
+        (15, 5),
+        (15, 4),
+        (14, 4),
+        (13, 4),
+        (13, 5),
+        (13, 6),
+        (13, 7),
+        (12, 7),
+        (11, 7),
+        (10, 7),
+        (9, 7),
+        (8, 7),
+        (7, 7),
+        (6, 7),
+        (5, 7),
         (4, 7),
         (4, 8),
         (4, 9),
@@ -593,16 +813,16 @@ def do_planification_v1():
         (22, 15),
     ]
 
-    # A-star
-    starting_positon = (1, 0)
-    ending_position = (22, 15)
+    # # A-star
+    # starting_positon = (1, 0)
+    # ending_position = (22, 15)
 
-    path = astar(starting_positon, ending_position)
-    print("path", path)
-    return path
+    # path = astar(starting_positon, ending_position)
+    # print("path", path)
+    return [path, []]
 
 
-def do_planification(maze):
+def do_planification_full(maze):
     # print("maze", maze.maze)
     # # A-star
     starting_positon = None
@@ -628,7 +848,7 @@ def do_planification(maze):
 
     # print("weigth_matrix", weigth_matrix)
     all_points = [starting_positon] + points_to_visit + [ending_position]
-    weigth_matrix = djikstra(all_points)
+    weigth_matrix = brushfire(all_points)
 
     # find the shortest path
     path_simplified_index = shortest_path(weigth_matrix)
@@ -683,7 +903,7 @@ class Node:
         return self.f > other.f
 
 
-def djikstra(all_points):
+def brushfire(all_points):
 
     with PrologMQI() as mqi:
         with PrologMQI() as mqi_file:
@@ -936,3 +1156,6 @@ def do_genetics(player, monsterList):
     # print("time to train genetics", end - start, "seconds")
 
     return best_attributes
+
+
+# fuzzy logic for real
