@@ -217,17 +217,23 @@ class App:
             )
         )
 
-        # for i in range(len(path) - 1):
-        #     live_cell = path[i]
-        #     next_cell = path[i + 1]
+        for i in range(len(path) - 1):
+            live_cell = path[i]
+            next_cell = path[i + 1]
 
-        #     pygame.draw.line(
-        #         self._display_surf,
-        #         (0, 0, 255),
-        #         (live_cell[0] * 50 + 25, live_cell[1] * 50 + 25),
-        #         (next_cell[0] * 50 + 25, next_cell[1] * 50 + 25),
-        #         2,
-        #     )
+            pygame.draw.line(
+                self._display_surf,
+                (0, 0, 255),
+                (
+                    (live_cell[0] + 0.5) * self.maze.tile_size_x,
+                    (live_cell[1] + 0.5) * self.maze.tile_size_y,
+                ),
+                (
+                    (next_cell[0] + 0.5) * self.maze.tile_size_x,
+                    (next_cell[1] + 0.5) * self.maze.tile_size_y,
+                ),
+                2,
+            )
 
         for i in range(len(path_simplified) - 1):
             live_cell = path_simplified[i]
@@ -236,8 +242,14 @@ class App:
             pygame.draw.line(
                 self._display_surf,
                 (255, 100, 255),
-                (live_cell[0] * 50 + 25, live_cell[1] * 50 + 25),
-                (next_cell[0] * 50 + 25, next_cell[1] * 50 + 25),
+                (
+                    (live_cell[0] + 0.5) * self.maze.tile_size_x,
+                    (live_cell[1] + 0.5) * self.maze.tile_size_y,
+                ),
+                (
+                    (next_cell[0] + 0.5) * self.maze.tile_size_x,
+                    (next_cell[1] + 0.5) * self.maze.tile_size_y,
+                ),
                 2,
             )
 
@@ -264,8 +276,8 @@ class App:
     def on_execute(self):
         self.on_init()
 
-        [path, path_simplified] = do_planification(self.maze)
         best_attributes = do_genetics(self.player, self.maze.monsterList)
+        [path, path_simplified] = do_planification(self.maze)
         original_monster_list = []
         for monster in self.maze.monsterList:
             original_monster_list.append(monster)
@@ -289,19 +301,20 @@ class App:
                     best_attributes=best_attributes,
                 )
 
-            # [key_to_press_for_AI, step_index] = get_movement_for_ai(
+            [key_to_press_for_AI, step_index] = get_movement_for_ai(
+                path,
+                self.player,
+                self.maze.make_perception_list(self.player, self._display_surf),
+                step_index,
+                self.maze,
+            )
+
+            # [key_to_press_for_AI, step_index] = get_movement_for_ai_fuzzy(
             #     path,
             #     self.player.get_position(),
             #     self.maze.make_perception_list(self.player, self._display_surf),
             #     step_index,
             # )
-
-            [key_to_press_for_AI, step_index] = get_movement_for_ai_fuzzy(
-                path,
-                self.player.get_position(),
-                self.maze.make_perception_list(self.player, self._display_surf),
-                step_index,
-            )
 
             self.on_AI_input(key_to_press_for_AI)  # A décommenter pour utiliser l'IA
             if self.on_coin_collision():
@@ -335,7 +348,13 @@ class App:
         self.on_cleanup()
 
 
-def fuzzyfication(closest_obs, current_step_position_center, main_direction_vector):
+def fuzzyfication(
+    closest_obs,
+    current_step_position_center,
+    main_direction_vector,
+    size_player,
+    size_obs,
+):
     overlap_left = 0
     overlap_right = 0
     if closest_obs:
@@ -343,26 +362,32 @@ def fuzzyfication(closest_obs, current_step_position_center, main_direction_vect
             # vertical line
             overlap_left = max(
                 0,
-                min(current_step_position_center[0], closest_obs[0] + 10)
-                - max(current_step_position_center[0] - 10, closest_obs[0]),
+                min(current_step_position_center[0], closest_obs[0] + size_obs)
+                - max(current_step_position_center[0] - size_player, closest_obs[0]),
             )
 
             overlap_right = max(
                 0,
-                min(current_step_position_center[0] + 10, closest_obs[0] + 10)
+                min(
+                    current_step_position_center[0] + size_player,
+                    closest_obs[0] + size_obs,
+                )
                 - max(current_step_position_center[0], closest_obs[0]),
             )
         elif main_direction_vector[1] == 0:
             # horizontal line
             overlap_left = max(
                 0,
-                min(current_step_position_center[1], closest_obs[1] + 10)
-                - max(current_step_position_center[1] - 10, closest_obs[1]),
+                min(current_step_position_center[1], closest_obs[1] + size_obs)
+                - max(current_step_position_center[1] - size_player, closest_obs[1]),
             )
 
             overlap_right = max(
                 0,
-                min(current_step_position_center[1] + 10, closest_obs[1] + 10)
+                min(
+                    current_step_position_center[1] + size_player,
+                    closest_obs[1] + size_obs,
+                )
                 - max(current_step_position_center[1], closest_obs[1]),
             )
 
@@ -429,12 +454,21 @@ def defuzzification(main_direction_vector, secondary_instruction):
     return instructions
 
 
-def get_movement_for_ai(path, player_position, perception_list, current_step_index):
-    player_position_center = (player_position[0] + 10, player_position[1] + 10)
+def get_movement_for_ai(path, player, perception_list, current_step_index, maze):
+
+    print("player rect", player.get_rect())
+    player_size_x = player.get_rect()[2]
+    player_size_y = player.get_rect()[3]
+
+    player_position = player.get_position()
+    player_position_center = (
+        player_position[0] + player_size_x / 2,
+        player_position[1] + player_size_y / 2,
+    )
 
     player_position_cell_i_j = (
-        player_position[0] // 50,
-        player_position[1] // 50,
+        player_position[0] // maze.tile_size_x,
+        player_position[1] // maze.tile_size_y,
     )
 
     main_direction_vector = (
@@ -443,25 +477,40 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     )
 
     if main_direction_vector[0] == 1:
-        if player_position_center[0] >= path[current_step_index + 1][0] * 50 + 25:
+        if (
+            player_position_center[0]
+            >= (path[current_step_index + 1][0] + 0.5) * maze.tile_size_x
+        ):
             current_step_index += 1
     elif main_direction_vector[0] == -1:
-        if player_position_center[0] <= path[current_step_index + 1][0] * 50 + 25:
+        if (
+            player_position_center[0]
+            <= (path[current_step_index + 1][0] + 0.5) * maze.tile_size_x
+        ):
             current_step_index += 1
     elif main_direction_vector[1] == 1:
-        if player_position_center[1] >= path[current_step_index + 1][1] * 50 + 25:
+        if (
+            player_position_center[1]
+            >= (path[current_step_index + 1][1] + 0.5) * maze.tile_size_y
+        ):
             current_step_index += 1
     elif main_direction_vector[1] == -1:
-        if player_position_center[1] <= path[current_step_index + 1][1] * 50 + 25:
+        if (
+            player_position_center[1]
+            <= (path[current_step_index + 1][1] + 0.5) * maze.tile_size_y
+        ):
             current_step_index += 1
 
     current_step = path[current_step_index]
     current_step_position_center = (
-        current_step[0] * 50 + 25,
-        current_step[1] * 50 + 25,
+        (current_step[0] + 0.5) * maze.tile_size_x,
+        (current_step[1] + 0.5) * maze.tile_size_y,
     )
     next_step = path[current_step_index + 1]
-    next_step_position = (next_step[0] * 50 + 25, next_step[1] * 50 + 25)
+    next_step_position = (
+        (next_step[0] + 0.5) * maze.tile_size_x,
+        (next_step[1] + 0.5) * maze.tile_size_x,
+    )
 
     main_direction_vector = (
         next_step[0] - current_step[0],
@@ -491,7 +540,13 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     # get the closest obstacle in front of the player
     closest_obs = None
     min_distance = 100000000
+    obs_size_x = 8
+
     for obstacle in obstacle_list:
+        print("obstacle", obstacle)
+        obs_size_x = obstacle[2]
+        obs_size_y = obstacle[3]
+
         if main_direction_vector[0] == 1:
             # vertical line
             if obstacle[0] + 5 < player_position_center[0] - main_direction_vector[
@@ -533,7 +588,11 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     print("line position", next_step_position)
 
     [overlap_left, overlap_right] = fuzzyfication(
-        closest_obs, current_step_position_center, main_direction_vector
+        closest_obs,
+        current_step_position_center,
+        main_direction_vector,
+        player_size_x,
+        obs_size_x,
     )
 
     fuzzy_output = fuzzy_rules(overlap_left, overlap_right, distance_from_line)
@@ -563,7 +622,7 @@ def get_movement_for_ai(path, player_position, perception_list, current_step_ind
     return [instructions, current_step_index]
 
 
-def do_planification(maze):
+def do_planification_v1(maze):
 
     path = [
         (1, 0),
@@ -822,7 +881,7 @@ def do_planification(maze):
     return [path, []]
 
 
-def do_planification_full(maze):
+def do_planification(maze):
     # print("maze", maze.maze)
     # # A-star
     starting_positon = None
@@ -919,6 +978,8 @@ def brushfire(all_points):
 
                 # fill the matrix with the taxi distance
                 for i, point1 in enumerate(all_points):
+
+                    print(i, "/", len(all_points), "calculating distances from", point1)
                     # for i in range(1):
                     point1 = all_points[i]
 
@@ -936,7 +997,7 @@ def brushfire(all_points):
                     while len(open_list) > 0:
 
                         current_node = heapq.heappop(open_list)
-                        print("current_node is", current_node)
+                        # print("current_node is", current_node)
 
                         closed_list.append(current_node)
 
@@ -991,7 +1052,7 @@ def brushfire(all_points):
 
                             heapq.heappush(open_list, child)
 
-                    print("closed_list", closed_list)
+                    # print("closed_list", closed_list)
 
                     for node in closed_list:
                         if node.position in all_points:
@@ -1030,6 +1091,7 @@ def shortest_path(weigth_matrix):
 
 
 def check_for_incoming_monster_to_set_stats(player, monster_list, best_attributes):
+
     min_distance = 1000000000
     monster_index = 0
     # print("monster_list", monster_list)
@@ -1061,18 +1123,29 @@ best_of_the_best = []
 def genetics_fitness_function(player, monster, attributes):
     print("attributes", attributes.shape)
     fitness = np.zeros((attributes.shape[0],))
+    best_score = 0
     for i in range(attributes.shape[0]):
         attributes_i = attributes[i, :]
+        # attributes_i = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        print("attributes_i", attributes_i)
+        for j, attribute in enumerate(attributes_i):
+            if attribute < -MAX_ATTRIBUTE:
+                print("attribute", attribute, "is too low")
+            if attribute > MAX_ATTRIBUTE:
+                print("attribute", attribute, "is too high")
         player.set_attributes(attributes_i)
         results = monster.mock_fight(player)
         # print("results", results)
         fitness[i] = results[1]
+        if results[0] > best_score:
+            best_score = results[0]
         if results[0] == 4:
             print("win")
             print("winning attributes", attributes_i)
             global best_of_the_best
             best_of_the_best = attributes_i
-    print("fitness", fitness.shape)
+    # print("fitness", fitness.shape)
+    print("best_score", best_score)
     return fitness
 
 
@@ -1081,9 +1154,17 @@ def quick_genetics(player, monster, attributes):
     fitness = np.zeros((attributes.shape[0],))
     for i in range(attributes.shape[0]):
         attributes_i = attributes[i, :]
+        # print("attributes_i", attributes_i)
+        # validate attributes
+        # for j, attribute in enumerate(attributes_i):
+        #     if attribute < -MAX_ATTRIBUTE:
+        #         print("attribute", attribute, "is too low")
+        #     if attribute > MAX_ATTRIBUTE:
+        #         print("attribute", attribute, "is too high")
         player.set_attributes(attributes_i)
         results = monster.mock_fight(player)
-        # print("results", results)
+        # results = (0, 1.5)
+        print("results", results)
         fitness[i] = results[1]
         if results[0] == 4:
             print("win")
@@ -1097,63 +1178,67 @@ def do_genetics(player, monsterList):
     start = time.time()
 
     # print("training genetics to fight...: \n\n")
+    print("monsterList", monsterList)
 
-    pop_size = 1000
-    nb_bits = 64
-    min_value = 0
-    max_value = MAX_ATTRIBUTE
-    cvalues = np.zeros((pop_size, NUM_ATTRIBUTES))
-    print("cvalues", cvalues.shape)
-    max_binary_value = 2**nb_bits - 1
-
-    while True:
-
-        # taux de mutation à 100%
-        population = np.random.randint(0, 2, (pop_size, NUM_ATTRIBUTES * nb_bits))
-        # print("population", population.shape)
-
-        for i in range(pop_size):
-            for j in range(NUM_ATTRIBUTES):
-                cvalues[i, j] = min_value + (max_value - min_value) * (
-                    np.sum(
-                        population[i, j * nb_bits : (j + 1) * nb_bits]
-                        * 2 ** np.arange(nb_bits)
-                    )
-                    / max_binary_value
-                )
-
-        best_attributes = []
-
-        got_perfect_attributes_temp = True
-        for i, monster in enumerate(monsterList):
-            best_attributes.append(quick_genetics(player, monster, cvalues))
-            # print("best_attributes", best_attributes)
-            player.set_attributes(best_attributes[i])
-            results = monster.mock_fight(player)
-            if results[0] != 4:
-                got_perfect_attributes_temp = False
-            # print("results best_attributes", results)
-
-        if got_perfect_attributes_temp:
-            break
-
-    # pop_size = 10
+    # pop_size = 1000
     # nb_bits = 64
-    # monster = monsterList[0]
+    # min_value = 0
+    # max_value = MAX_ATTRIBUTE
+    # cvalues = np.zeros((pop_size, NUM_ATTRIBUTES))
+    # print("cvalues", cvalues.shape)
+    # max_binary_value = 2**nb_bits - 1
 
-    # best_genetics = train_genetics(
-    #     lambda x: genetics_fitness_function(player, monster, x),
-    #     NUM_ATTRIBUTES,
-    #     0,
-    #     MAX_ATTRIBUTE,
-    # )
-    # player.set_attributes(best_genetics)
-    # results = monster.mock_fight(player)
-    # print("results best_attributes", results)
+    # while True:
+    #     print("new generation")
+    #     # taux de mutation à 100%
+    #     population = np.random.randint(0, 2, (pop_size, NUM_ATTRIBUTES * nb_bits))
+    #     # print("population", population.shape)
+
+    #     for i in range(pop_size):
+    #         for j in range(NUM_ATTRIBUTES):
+    #             cvalues[i, j] = min_value + (max_value - min_value) * (
+    #                 np.sum(
+    #                     population[i, j * nb_bits : (j + 1) * nb_bits]
+    #                     * 2 ** np.arange(nb_bits)
+    #                 )
+    #                 / max_binary_value
+    #             )
+
+    best_attributes = []
+
+    #     got_perfect_attributes_temp = True
+    #     for i, monster in enumerate(monsterList):
+    #         best_attributes_i = quick_genetics(player, monster, cvalues)
+    #         if best_attributes_i is None:
+    #             got_perfect_attributes_temp = False
+    #         else:
+    #             best_attributes.append(quick_genetics(player, monster, cvalues))
+    #             print("best_attributes", best_attributes)
+    #             player.set_attributes(best_attributes[i])
+    #             results = monster.mock_fight(player)
+
+    #             print("results best_attributes", results)
+
+    #     if got_perfect_attributes_temp:
+    #         break
+
+    monster = monsterList[0]
+
+    best_genetics = train_genetics(
+        lambda x: genetics_fitness_function(player, monster, x),
+        NUM_ATTRIBUTES,
+        -MAX_ATTRIBUTE,
+        MAX_ATTRIBUTE,
+    )
+    player.set_attributes(best_genetics)
+    results = monster.mock_fight(player)
+    print("results best_attributes", results)
 
     # end timer
     end = time.time()
     # print("time to train genetics", end - start, "seconds")
+
+    raise Exception("done")
 
     return best_attributes
 
