@@ -3,14 +3,23 @@ import time
 
 
 def get_movement_for_ai_fuzzy(
-    path, player_position, perception_list, current_step_index
+    path,
+    player_position,
+    perception_list,
+    current_step_index,
+    player_size,
+    tile_size,
+    obs_size,
 ):
 
-    player_position_center = (player_position[0] + 10, player_position[1] + 10)
+    player_position_center = (
+        player_position[0] + player_size / 2,
+        player_position[1] + player_size / 2,
+    )
 
     player_position_cell_i_j = (
-        player_position[0] // 50,
-        player_position[1] // 50,
+        player_position[0] // tile_size,
+        player_position[1] // tile_size,
     )
 
     main_direction_vector = (
@@ -19,52 +28,68 @@ def get_movement_for_ai_fuzzy(
     )
 
     if main_direction_vector[0] == 1:
-        if player_position_center[0] >= path[current_step_index + 1][0] * 50 + 25:
+        if (
+            player_position_center[0]
+            >= (path[current_step_index + 1][0] + 0.5) * tile_size
+        ):
             current_step_index += 1
     elif main_direction_vector[0] == -1:
-        if player_position_center[0] <= path[current_step_index + 1][0] * 50 + 25:
+        if (
+            player_position_center[0]
+            <= (path[current_step_index + 1][0] + 0.5) * tile_size
+        ):
             current_step_index += 1
     elif main_direction_vector[1] == 1:
-        if player_position_center[1] >= path[current_step_index + 1][1] * 50 + 25:
+        if (
+            player_position_center[1]
+            >= (path[current_step_index + 1][1] + 0.5) * tile_size
+        ):
             current_step_index += 1
     elif main_direction_vector[1] == -1:
-        if player_position_center[1] <= path[current_step_index + 1][1] * 50 + 25:
+        if (
+            player_position_center[1]
+            <= (path[current_step_index + 1][1] + 0.5) * tile_size
+        ):
             current_step_index += 1
 
     current_step = path[current_step_index]
     current_step_position_center = (
-        current_step[0] * 50 + 25,
-        current_step[1] * 50 + 25,
+        (current_step[0] + 0.5) * tile_size,
+        (current_step[1] + 0.5) * tile_size,
     )
     next_step = path[current_step_index + 1]
-    next_step_position = (next_step[0] * 50 + 25, next_step[1] * 50 + 25)
+    next_step_position = (
+        (next_step[0] + 0.5) * tile_size,
+        (next_step[1] + 0.5) * tile_size,
+    )
 
     main_direction_vector = (
         next_step[0] - current_step[0],
         next_step[1] - current_step[1],
     )
 
-    print("path", path)
-    print("current_step_index", current_step_index)
-    print("current_step", current_step)
-    print("next_step", next_step)
-
     # fuzzy code
 
     [output_left, output_right] = [0, 0]
 
     [output_left, output_right] = get_output_follow_line(
-        player_position_center, current_step_position_center, main_direction_vector
+        player_position_center,
+        current_step_position_center,
+        main_direction_vector,
+        tile_size,
     )
 
     for obstacle in perception_list[1]:
-        position_obstacle = (obstacle[0] + 5, obstacle[1] + 5)
+        position_obstacle = (obstacle[0] + obs_size / 2, obstacle[1] + obs_size / 2)
 
         temp = get_output_dodge_obstacle(
             player_position_center,
             position_obstacle,
             main_direction_vector,
             current_step_position_center,
+            player_size,
+            tile_size,
+            obs_size,
         )
         print("temp", temp)
         factor = 100
@@ -133,7 +158,7 @@ def get_movement_for_ai_fuzzy(
 
 
 def get_output_follow_line(
-    player_position_center, line_position, main_direction_vector
+    player_position_center, line_position, main_direction_vector, tile_size
 ):
     if main_direction_vector[0] == 0:
         # vertical line
@@ -147,15 +172,21 @@ def get_output_follow_line(
         ) * main_direction_vector[0]
 
     if distance_line_secondary_direction > 0:
-        return [(distance_line_secondary_direction - 50) / 50, 0]
+        return [(distance_line_secondary_direction - tile_size) / tile_size, 0]
     elif distance_line_secondary_direction < 0:
-        return [0, (distance_line_secondary_direction - 50) / 50]
+        return [0, (distance_line_secondary_direction - tile_size) / tile_size]
     else:
         return [0, 0]
 
 
 def get_output_dodge_obstacle(
-    player_position_center, obstacle_position, main_direction_vector, line_position
+    player_position_center,
+    obstacle_position,
+    main_direction_vector,
+    line_position,
+    player_size,
+    tile_size,
+    obs_size,
 ):
 
     if main_direction_vector[0] == 0:
@@ -199,20 +230,23 @@ def get_output_dodge_obstacle(
     print("obstacle_position", obstacle_position[1])
     print("distance_obstacle", distance_obstacle)
 
-    if distance_obstacle >= 0 and distance_obstacle < 16:
-        output_left = (16 - distance_obstacle) / 32
-        output_right = (16 - distance_obstacle) / 16
+    normal_size = player_size / 2 + obs_size / 2 + 1
+    max_size = normal_size * 2
+
+    if distance_obstacle >= 0 and distance_obstacle < normal_size:
+        output_left = (normal_size - distance_obstacle) / max_size
+        output_right = (normal_size - distance_obstacle) / normal_size
         print("case 1")
-    elif distance_obstacle < 0 and distance_obstacle > -16:
-        output_left = abs((16 + distance_obstacle)) / 16
-        output_right = abs((16 + distance_obstacle)) / 32
+    elif distance_obstacle < 0 and distance_obstacle > -normal_size:
+        output_left = abs((normal_size + distance_obstacle)) / normal_size
+        output_right = abs((normal_size + distance_obstacle)) / max_size
         print("case 2")
     else:
         output_left = 0
         output_right = 0
         print("case 3")
 
-    temp_r4 = r4(line_position, obstacle_position, main_direction_vector)
+    temp_r4 = r4(line_position, obstacle_position, main_direction_vector, tile_size)
     # scale_factor = math.sqrt(((obstacle_position[0] + player_position_center[0]) ** 2) + (
     #    (player_position_center[1] + obstacle_position[1]) ** 2
     # )) * 200
@@ -227,7 +261,7 @@ def get_output_dodge_obstacle(
     return [output_left, output_right]
 
 
-def r4(line_position, obstacle_position, main_direction_vector):
+def r4(line_position, obstacle_position, main_direction_vector, tile_size):
 
     if main_direction_vector[0] == 0:
         # vertical line
@@ -241,11 +275,11 @@ def r4(line_position, obstacle_position, main_direction_vector):
         ) * main_direction_vector[0]
 
     if distance_obstacle_center < 0:
-        output_left = abs(distance_obstacle_center) / 25
+        output_left = abs(distance_obstacle_center) / (tile_size / 2)
         output_right = 0
     elif distance_obstacle_center > 0:
         output_left = 0
-        output_right = abs(distance_obstacle_center) / 25
+        output_right = abs(distance_obstacle_center) / (tile_size / 2)
     else:
         output_left = 1
         output_right = 1
