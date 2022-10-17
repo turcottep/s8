@@ -1,4 +1,5 @@
 from skimage.restoration import estimate_sigma as skimage_estimate_sigma
+from skimage.feature import corner_fast, corner_peaks
 from skimage import color as skic
 import numpy as np
 
@@ -33,8 +34,12 @@ def get_color_value_from_hsv(imageRGB, color: str):
         upper_bound = np.array([1, 0.1, 1])
 
     if color == "grey":
-        lower_bound = np.array([0, 0, 0.5])
-        upper_bound = np.array([1, 0.1, 0.9])
+        lower_bound = np.array([0, 0, 0.25])
+        upper_bound = np.array([1, 0.25, 0.75])
+
+    if color == "blue":
+        lower_bound = np.array([180 / 360, 0.2, 0.2])
+        upper_bound = np.array([260 / 360, 1, 1])
 
     if color == "green":
         lower_bound = np.array([60 / 360, 0.2, 0.2])
@@ -102,3 +107,23 @@ def get_value_from_rgb_shelby(imageRGB, color_index):
         )
     )
     return pixel_most[color_index] / nb_pixels
+
+
+def get_square_value(imageRGB):
+    # convert to gray
+    imageGray = skic.rgb2gray(imageRGB)
+    corner = corner_peaks(corner_fast(imageGray), min_distance=10)
+    # print(corner)
+    return len(corner)
+
+
+def get_light_pixel_top_image(imageRGB):
+    value = np.count_nonzero(
+        np.logical_and(
+            np.logical_and(
+                (imageRGB[0:45, :, 0] >= 200), (imageRGB[0:45, :, 1] >= 200)
+            ),
+            (imageRGB[0:45, :, 2] >= 200),
+        )
+    )
+    return value / (45 * imageRGB.shape[1])

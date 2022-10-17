@@ -11,6 +11,8 @@ Méthodes statiques: TODO JB move to helpers
 """
 
 from cProfile import label
+from cgitb import grey
+import itertools
 from turtle import color
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,6 +24,8 @@ from parameters import (
     get_color_value_from_hsv,
     get_value_from_rgb,
     get_value_from_rgb_shelby,
+    get_square_value,
+    get_light_pixel_top_image,
 )
 from skimage import color as skic
 from skimage import io as skiio
@@ -48,6 +52,22 @@ class ImageCollection:
     # # TODO décommenter si voulu pour charger TOUTES les images
     images = np.array([np.array(skiio.imread(image)) for image in _path])
     all_images_loaded = True
+
+    def test_square(self):
+        """
+        Fonction pour tester l'efficacité de la fonction square
+        """
+        # fig2 = plt.figure()
+        # ax2 = fig2.subplots(2, 1)
+
+        # im = skiio.imread(
+        #     ImageCollection.image_folder + os.sep + ImageCollection.image_list[500]
+        # )
+        # ax2[0].imshow(im)
+        # ax2[0].set_title(ImageCollection.image_list[0])
+
+        # square_value = get_square_value(im)
+        # ax2[1].set_title(square_value)
 
     def images_display(indexes):
         """
@@ -102,8 +122,8 @@ class ImageCollection:
                 / (LabCte.max_L - LabCte.min_L)
             )  # L has all values between 0 and 100
             # Quantification de a et b en n_bins niveaux
-            imageLabRescale[:, :, 1:2] = np.round(
-                (LabImage[:, :, 1:2] - LabCte.min_ab)
+            imageLabRescale[:, :, 1:3] = np.round(
+                (LabImage[:, :, 1:3] - LabCte.min_ab)
                 * (n_bins - 1)
                 / (LabCte.max_ab - LabCte.min_ab)
             )  # a and b have all values between -110 and 110
@@ -231,10 +251,10 @@ class ImageCollection:
         params_names = [
             "noise_level",
             "green",
-            "",
-            "",
-            "",
-            "",
+            "blue",
+            "grey",
+            "corners",
+            "light_pixel",
             "",
             "",
             "",
@@ -243,12 +263,12 @@ class ImageCollection:
 
         colors = {
             "coast_normal": "blue",
-            "coast_beach": "yellow",
-            "coast_sunset": "red",
+            "coast_beach": "blue",  # "yellow",
+            "coast_sunset": "blue",  # "red",
             "forest_green": "green",
-            "forest_fall": "orange",
-            "forest_white": "black",
-            "street_normal": "gray",
+            "forest_fall": "green",  # "orange",
+            "forest_white": "green",  # "black",
+            "street_normal": "orange",  # "gray",
             "unknown": "black",
         }
 
@@ -263,12 +283,31 @@ class ImageCollection:
 
             green_level = get_color_value_from_hsv(self.images[i], "green")
 
+            blue_level = get_color_value_from_hsv(self.images[i], "blue")
+
+            grey_level = get_color_value_from_hsv(self.images[i], "grey")
+
+            corners = get_square_value(self.images[i])
+
+            light_pixel = get_light_pixel_top_image(self.images[i])
+
             # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
 
             # print(i, "noise_level", param)
             graph_color = colors[class_type]
 
-            params = [noise_level, green_level, 0, 0, 0, 0, 0, 0, 0, 0]
+            params = [
+                noise_level,
+                green_level,
+                blue_level,
+                grey_level,
+                corners,
+                light_pixel,
+                0,
+                0,
+                0,
+                0,
+            ]
 
             img_obj = {
                 "image": image_name,
@@ -283,10 +322,10 @@ class ImageCollection:
         # sort by class
         images_object_list.sort(key=lambda x: x["type"])
 
-        param_index_a = 0
-        param_index_b = 1
+        param_index_a = 3
+        param_index_b = 4
 
-        param_index = 1
+        param_index = 3
 
         # get average and standard deviation for each class for noise level
         param_by_class = []
@@ -299,7 +338,7 @@ class ImageCollection:
                 ]
             )
 
-        print("noise_levels", param_by_class)
+        # print("noise_levels", param_by_class)
 
         # get average and standard deviation for each class for noise level
         param_mean = []
@@ -308,8 +347,8 @@ class ImageCollection:
             param_mean.append(np.mean(param))
             param_std.append(np.std(param))
 
-        print("noise_levels_mean", param_mean)
-        print("noise_levels_std", param_std)
+        # print("noise_levels_mean", param_mean)
+        # print("noise_levels_std", param_std)
 
         # metrics = ImageCollection.get_color_values(range(range_max), 255, 0, 0)
 
@@ -322,51 +361,95 @@ class ImageCollection:
 
         #### 1 d plot #####
 
-        # plot the distribution of the metrics for each class
-        plt.figure()
-
-        for i in range(range_max):
-            plt.plot(
-                i,
-                images_object_list[i]["params"][param_index],
-                "o",
-                label=images_object_list[i]["type"],
-                color=images_object_list[i]["graph_color"],
-            )
-
-        # plt.legend()
-
-        # draw horizontal lines for the mean and standard deviation
-        for i in range(len(colors)):
-            plt.axhline(
-                param_mean[i],
-                color=colors[list(colors.keys())[i]],
-                linestyle="--",
-            )
-            plt.axhline(
-                param_mean[i] - param_std[i],
-                color=colors[list(colors.keys())[i]],
-                linestyle=":",
-            )
-            plt.axhline(
-                param_mean[i] + param_std[i],
-                color=colors[list(colors.keys())[i]],
-                linestyle=":",
-            )
-
-        # plt.scatter(classes, metrics, alpha=0.1)
-        # plt.xlabel("classes")
-        # plt.ylabel("noise levels")
-        plt.title(params_names[param_index] + " depending on the class")
-
-        #### 2 d plot #####
+        # # plot the distribution of the metrics for each class
         # plt.figure()
 
         # for i in range(range_max):
         #     plt.plot(
-        #         images_object_list[i]["params"][param_index_a],
-        #         images_object_list[i]["params"][param_index_b],
+        #         i,
+        #         images_object_list[i]["params"][param_index],
         #         "o",
+        #         label=images_object_list[i]["type"],
+        #         color=images_object_list[i]["graph_color"],
+        #     )
+
+        # # plt.legend()
+
+        # # draw horizontal lines for the mean and standard deviation
+        # for i in range(len(colors)):
+        #     plt.axhline(
+        #         param_mean[i],
+        #         color=colors[list(colors.keys())[i]],
+        #         linestyle="--",
+        #     )
+        #     plt.axhline(
+        #         param_mean[i] - param_std[i],
+        #         color=colors[list(colors.keys())[i]],
+        #         linestyle=":",
+        #     )
+        #     plt.axhline(
+        #         param_mean[i] + param_std[i],
+        #         color=colors[list(colors.keys())[i]],
+        #         linestyle=":",
+        #     )
+
+        # # plt.scatter(classes, metrics, alpha=0.1)
+        # # plt.xlabel("classes")
+        # # plt.ylabel("noise levels")
+        # plt.title(params_names[param_index] + " depending on the class")
+
+        #### 2 d plot #####
+        plt.figure()
+
+        # generate all possible combinations of parameters
+        param_combinations = list(itertools.combinations(range(6), 2))
+        print("param_combinations", param_combinations)
+        print("param_combinations", len(param_combinations))
+
+        subplot_dim = (4, 4)
+        ax, fig = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(20, 20))
+        # fig.tight_layout()
+
+        for i, param_combination in enumerate(param_combinations):
+            print("i", i)
+            param_index_a = param_combination[0]
+            param_index_b = param_combination[1]
+            print("param_index_a", param_index_a, "param_index_b", param_index_b)
+            plt.subplot(subplot_dim[0], subplot_dim[1], i + 1)
+
+            for j in range(range_max):
+                plt.plot(
+                    images_object_list[j]["params"][param_index_a],
+                    images_object_list[j]["params"][param_index_b],
+                    "o",
+                    label=images_object_list[j]["type"],
+                    color=images_object_list[j]["graph_color"],
+                    alpha=0.1,
+                )
+
+            # hide the x and y ticks
+            plt.xticks([])
+            plt.yticks([])
+
+            # hide the x and y values
+            plt.tick_params(axis="both", which="both", length=0)
+
+            # add axis labels to the inside of the plot
+            plt.xlabel(params_names[param_index_a])
+            plt.ylabel(params_names[param_index_b])
+            # ax.axes.xaxis.set_label_coords(0.5, -0.1)
+            # ax.axes.yaxis.set_label_coords(-0.1, 0.5)
+
+        #### 3 d plot #####
+        # fig = plt.figure()
+
+        # ax = fig.add_subplot(111, projection="3d")
+
+        # for i in range(range_max):
+        #     ax.scatter(
+        #         images_object_list[i]["params"][4],
+        #         images_object_list[i]["params"][1],
+        #         images_object_list[i]["params"][2],
         #         label=images_object_list[i]["type"],
         #         color=images_object_list[i]["graph_color"],
         #         alpha=0.5,
