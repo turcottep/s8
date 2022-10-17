@@ -33,7 +33,7 @@ class ImageCollection:
     """
 
     # liste de toutes les images
-    image_folder = r"." + os.sep + "baseDeDonneesImages"
+    image_folder = r"." + os.sep + "images_clean"
     _path = glob.glob(image_folder + os.sep + r"*.jpg")
     image_list = os.listdir(image_folder)
     # Filtrer pour juste garder les images
@@ -242,9 +242,13 @@ class ImageCollection:
         ]
 
         colors = {
-            "coast": "blue",
-            "forest": "green",
-            "street": "gray",
+            "coast_normal": "blue",
+            "coast_beach": "yellow",
+            "coast_sunset": "red",
+            "forest_green": "green",
+            "forest_fall": "orange",
+            "forest_white": "black",
+            "street_normal": "gray",
             "unknown": "black",
         }
 
@@ -252,14 +256,8 @@ class ImageCollection:
         for i in range(range_max):
             print("Image", i, "/", range_max, end="\r")
             image_name = self.image_list[i]
-            if image_name.startswith("coast"):
-                type = "coast"
-            elif image_name.startswith("forest"):
-                type = "forest"
-            elif image_name.startswith("street"):
-                type = "street"
-            else:
-                type = "unknown"
+
+            class_type = image_name.split("_")[0] + "_" + image_name.split("_")[1]
 
             noise_level = get_noise_level(self.images[i])
 
@@ -268,13 +266,13 @@ class ImageCollection:
             # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
 
             # print(i, "noise_level", param)
-            graph_color = colors[type]
+            graph_color = colors[class_type]
 
             params = [noise_level, green_level, 0, 0, 0, 0, 0, 0, 0, 0]
 
             img_obj = {
                 "image": image_name,
-                "type": type,
+                "type": class_type,
                 "params": params,
                 "graph_color": graph_color,
             }
@@ -288,7 +286,7 @@ class ImageCollection:
         param_index_a = 0
         param_index_b = 1
 
-        param_index = 0
+        param_index = 1
 
         # get average and standard deviation for each class for noise level
         param_by_class = []
@@ -324,52 +322,52 @@ class ImageCollection:
 
         #### 1 d plot #####
 
-        # # plot the distribution of the metrics for each class
-        # plt.figure()
-
-        # for i in range(range_max):
-        #     plt.plot(
-        #         i,
-        #         images_object_list[i]["params"][param_index],
-        #         "o",
-        #         label=images_object_list[i]["type"],
-        #         color=images_object_list[i]["graph_color"],
-        #     )
-
-        # # plt.legend()
-
-        # # draw horizontal lines for the mean and standard deviation
-        # for i in range(len(colors)):
-        #     plt.axhline(
-        #         param_mean[i],
-        #         color=colors[list(colors.keys())[i]],
-        #         linestyle="--",
-        #     )
-        #     plt.axhline(
-        #         param_mean[i] - param_std[i],
-        #         color=colors[list(colors.keys())[i]],
-        #         linestyle=":",
-        #     )
-        #     plt.axhline(
-        #         param_mean[i] + param_std[i],
-        #         color=colors[list(colors.keys())[i]],
-        #         linestyle=":",
-        #     )
-
-        # # plt.scatter(classes, metrics, alpha=0.1)
-        # # plt.xlabel("classes")
-        # # plt.ylabel("noise levels")
-        # plt.title(params_names[param_index] + " depending on the class")
-
-        #### 2 d plot #####
+        # plot the distribution of the metrics for each class
         plt.figure()
 
         for i in range(range_max):
             plt.plot(
-                images_object_list[i]["params"][param_index_a],
-                images_object_list[i]["params"][param_index_b],
+                i,
+                images_object_list[i]["params"][param_index],
                 "o",
                 label=images_object_list[i]["type"],
                 color=images_object_list[i]["graph_color"],
-                alpha=0.5,
             )
+
+        # plt.legend()
+
+        # draw horizontal lines for the mean and standard deviation
+        for i in range(len(colors)):
+            plt.axhline(
+                param_mean[i],
+                color=colors[list(colors.keys())[i]],
+                linestyle="--",
+            )
+            plt.axhline(
+                param_mean[i] - param_std[i],
+                color=colors[list(colors.keys())[i]],
+                linestyle=":",
+            )
+            plt.axhline(
+                param_mean[i] + param_std[i],
+                color=colors[list(colors.keys())[i]],
+                linestyle=":",
+            )
+
+        # plt.scatter(classes, metrics, alpha=0.1)
+        # plt.xlabel("classes")
+        # plt.ylabel("noise levels")
+        plt.title(params_names[param_index] + " depending on the class")
+
+        #### 2 d plot #####
+        # plt.figure()
+
+        # for i in range(range_max):
+        #     plt.plot(
+        #         images_object_list[i]["params"][param_index_a],
+        #         images_object_list[i]["params"][param_index_b],
+        #         "o",
+        #         label=images_object_list[i]["type"],
+        #         color=images_object_list[i]["graph_color"],
+        #         alpha=0.5,
+        #     )
