@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import glob
+from analysis import view_classes, Extent
 from parameters import (
     get_noise_level,
     get_color_value_from_hsv,
@@ -262,7 +263,8 @@ class ImageCollection:
 
             noise_level = get_noise_level(self.images[i])
 
-            green_level = get_color_value_from_hsv(self.images[i], 1, 1, 1)
+            green_level = get_color_value_from_hsv(self.images[i], "green")
+
             # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
 
             # print(i, "noise_level", param)
@@ -283,7 +285,10 @@ class ImageCollection:
         # sort by class
         images_object_list.sort(key=lambda x: x["type"])
 
-        param_index = 1
+        param_index_a = 0
+        param_index_b = 1
+
+        param_index = 0
 
         # get average and standard deviation for each class for noise level
         param_by_class = []
@@ -317,39 +322,54 @@ class ImageCollection:
         # TODO L1.E3.7: afficher un message dans la console si les images sont discriminables
         # ou pas discriminables
 
-        # plot the distribution of the metrics for each class
+        #### 1 d plot #####
+
+        # # plot the distribution of the metrics for each class
+        # plt.figure()
+
+        # for i in range(range_max):
+        #     plt.plot(
+        #         i,
+        #         images_object_list[i]["params"][param_index],
+        #         "o",
+        #         label=images_object_list[i]["type"],
+        #         color=images_object_list[i]["graph_color"],
+        #     )
+
+        # # plt.legend()
+
+        # # draw horizontal lines for the mean and standard deviation
+        # for i in range(len(colors)):
+        #     plt.axhline(
+        #         param_mean[i],
+        #         color=colors[list(colors.keys())[i]],
+        #         linestyle="--",
+        #     )
+        #     plt.axhline(
+        #         param_mean[i] - param_std[i],
+        #         color=colors[list(colors.keys())[i]],
+        #         linestyle=":",
+        #     )
+        #     plt.axhline(
+        #         param_mean[i] + param_std[i],
+        #         color=colors[list(colors.keys())[i]],
+        #         linestyle=":",
+        #     )
+
+        # # plt.scatter(classes, metrics, alpha=0.1)
+        # # plt.xlabel("classes")
+        # # plt.ylabel("noise levels")
+        # plt.title(params_names[param_index] + " depending on the class")
+
+        #### 2 d plot #####
         plt.figure()
 
         for i in range(range_max):
             plt.plot(
-                i,
-                images_object_list[i]["params"][param_index],
+                images_object_list[i]["params"][param_index_a],
+                images_object_list[i]["params"][param_index_b],
                 "o",
                 label=images_object_list[i]["type"],
                 color=images_object_list[i]["graph_color"],
+                alpha=0.5,
             )
-
-        # plt.legend()
-
-        # draw horizontal lines for the mean and standard deviation
-        for i in range(len(colors)):
-            plt.axhline(
-                param_mean[i],
-                color=colors[list(colors.keys())[i]],
-                linestyle="--",
-            )
-            plt.axhline(
-                param_mean[i] - param_std[i],
-                color=colors[list(colors.keys())[i]],
-                linestyle=":",
-            )
-            plt.axhline(
-                param_mean[i] + param_std[i],
-                color=colors[list(colors.keys())[i]],
-                linestyle=":",
-            )
-
-        # plt.scatter(classes, metrics, alpha=0.1)
-        # plt.xlabel("classes")
-        # plt.ylabel("noise levels")
-        plt.title(params_names[param_index] + " depending on the class")

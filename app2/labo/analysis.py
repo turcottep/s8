@@ -41,6 +41,7 @@ class Extent:
         get_array: retourne les min max formattés en array
         get_corners: retourne les coordonnées des points aux coins d'un range couvert par les min max
     """
+
     def __init__(self, xmin=0, xmax=10, ymin=0, ymax=10, ptList=None):
         """
         Constructeur
@@ -49,10 +50,10 @@ class Extent:
             passer 1 array qui contient les des points sur lesquels sont calculées les min et max
         """
         if ptList is not None:
-            self.xmin = np.floor(np.min(ptList[:,0]))-1
-            self.xmax = np.ceil(np.max(ptList[:,0]))+1
-            self.ymin = np.floor(np.min(ptList[:,1]))-1
-            self.ymax = np.ceil(np.max(ptList[:,1]))+1
+            self.xmin = np.floor(np.min(ptList[:, 0])) - 1
+            self.xmax = np.ceil(np.max(ptList[:, 0])) + 1
+            self.ymin = np.floor(np.min(ptList[:, 1])) - 1
+            self.ymax = np.ceil(np.max(ptList[:, 1])) + 1
         else:
             self.xmin = xmin
             self.xmax = xmax
@@ -69,10 +70,12 @@ class Extent:
         """
         Accesseur qui retourne une liste points qui correspondent aux 4 coins d'un range 2D bornés par les min max
         """
-        return np.array(list(itertools.product([self.xmin, self.xmax], [self.ymin, self.ymax])))
+        return np.array(
+            list(itertools.product([self.xmin, self.xmax], [self.ymin, self.ymax]))
+        )
 
 
-def viewEllipse(data, ax, scale=1, facecolor='none', edgecolor='red', **kwargs):
+def viewEllipse(data, ax, scale=1, facecolor="none", edgecolor="red", **kwargs):
     """
     ***Testé seulement sur les données du labo
     Ajoute une ellipse à distance 1 sigma du centre d'une classe
@@ -88,9 +91,16 @@ def viewEllipse(data, ax, scale=1, facecolor='none', edgecolor='red', **kwargs):
     """
     moy, cov, lambdas, vectors = calcModeleGaussien(data)
     # TODO L2.E1.2 Remplacer les valeurs bidons par les bons paramètres à partir des stats ici
-    ellipse = Ellipse((1,1), width=scale, height=scale,
-                      angle=0, facecolor=facecolor,
-                      edgecolor=edgecolor, linewidth=2, **kwargs)
+    ellipse = Ellipse(
+        (1, 1),
+        width=scale,
+        height=scale,
+        angle=0,
+        facecolor=facecolor,
+        edgecolor=edgecolor,
+        linewidth=2,
+        **kwargs,
+    )
     return ax.add_patch(ellipse)
 
 
@@ -108,11 +118,14 @@ def view_classes(data, extent, border_coeffs=None):
     dims = np.asarray(data).shape
 
     fig1, ax1 = plt.subplots(1, 1)
-    ax1.set_title(r'Visualisation des classes, des ellipses à distance 1$\sigma$' + ('et des frontières' if border_coeffs is not None else ''))
+    ax1.set_title(
+        r"Visualisation des classes, des ellipses à distance 1$\sigma$"
+        + ("et des frontières" if border_coeffs is not None else "")
+    )
 
     #  TODO: rendre général, seulement 3 classes pour l'instant
-    colorpoints = ['orange', 'purple', 'black']
-    colorfeatures = ['red', 'green', 'blue']
+    colorpoints = ["orange", "purple", "black"]
+    colorfeatures = ["red", "green", "blue"]
 
     for i in range(dims[0]):
         tempdata = data[i]
@@ -123,22 +136,43 @@ def view_classes(data, extent, border_coeffs=None):
 
     # Ajout des frontières
     if border_coeffs is not None:
-        x, y = np.meshgrid(np.linspace(extent.xmin, extent.xmax, 400),
-                           np.linspace(extent.ymin, extent.ymax, 400))
+        x, y = np.meshgrid(
+            np.linspace(extent.xmin, extent.xmax, 400),
+            np.linspace(extent.ymin, extent.ymax, 400),
+        )
         for i in range(math.comb(dims[0], 2)):
             # rappel: coef order: [x**2, xy, y**2, x, y, cst (cote droit log de l'equation de risque), cst (dans les distances de mahalanobis)]
-            ax1.contour(x, y,
-                        border_coeffs[i][0] * x ** 2 + border_coeffs[i][2] * y ** 2 +
-                        border_coeffs[i][3] * x + border_coeffs[i][6] +
-                        border_coeffs[i][1] * x * y + border_coeffs[i][4] * y, [border_coeffs[i][5]])
+            ax1.contour(
+                x,
+                y,
+                border_coeffs[i][0] * x**2
+                + border_coeffs[i][2] * y**2
+                + border_coeffs[i][3] * x
+                + border_coeffs[i][6]
+                + border_coeffs[i][1] * x * y
+                + border_coeffs[i][4] * y,
+                [border_coeffs[i][5]],
+            )
 
-    ax1.set_xlim([extent.xmin, extent.xmax])
-    ax1.set_ylim([extent.ymin, extent.ymax])
+    # ax1.set_xlim([extent.xmin, extent.xmax])
+    # ax1.set_ylim([extent.ymin, extent.ymax])
 
-    ax1.axes.set_aspect('equal')
+    # ax1.axes.set_aspect("equal")
 
 
-def view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None):
+def view_classification_results(
+    train_data,
+    test1,
+    c1,
+    c2,
+    glob_title,
+    title1,
+    title2,
+    extent,
+    test2=None,
+    c3=None,
+    title3=None,
+):
     """
     Génère 1 graphique avec 3 subplots:
         1. Des données "d'origine" train_data avec leur étiquette encodée dans la couleur c1
@@ -163,27 +197,27 @@ def view_classification_results(train_data, test1, c1, c2, glob_title, title1, t
         range des données
     :return:
     """
-    cmap = cm.get_cmap('seismic')
+    cmap = cm.get_cmap("seismic")
     if np.asarray(test2).any():
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
         ax3.scatter(test2[:, 0], test2[:, 1], s=5, c=cmap(c3))
         ax3.set_title(title3)
         ax3.set_xlim([extent.xmin, extent.xmax])
         ax3.set_ylim([extent.ymin, extent.ymax])
-        ax3.axes.set_aspect('equal')
+        ax3.axes.set_aspect("equal")
     else:
         fig, (ax1, ax2) = plt.subplots(2, 1)
     fig.suptitle(glob_title)
-    ax1.scatter(train_data[:, 0], train_data[:, 1], s=5, c=c1, cmap='viridis')
-    ax2.scatter(test1[:, 0], test1[:, 1], s=5, c=c2, cmap='viridis')
+    ax1.scatter(train_data[:, 0], train_data[:, 1], s=5, c=c1, cmap="viridis")
+    ax2.scatter(test1[:, 0], test1[:, 1], s=5, c=c2, cmap="viridis")
     ax1.set_title(title1)
     ax2.set_title(title2)
     ax1.set_xlim([extent.xmin, extent.xmax])
     ax1.set_ylim([extent.ymin, extent.ymax])
     ax2.set_xlim([extent.xmin, extent.xmax])
     ax2.set_ylim([extent.ymin, extent.ymax])
-    ax1.axes.set_aspect('equal')
-    ax2.axes.set_aspect('equal')
+    ax1.axes.set_aspect("equal")
+    ax2.axes.set_aspect("equal")
 
 
 def plot_metrics(model):
@@ -195,7 +229,7 @@ def plot_metrics(model):
     # Détermine le nombre de subplots nécessaires
     i = 0
     for j, metric in enumerate(model.history.history):
-        if metric.find('val_') != -1:
+        if metric.find("val_") != -1:
             continue
         else:
             i += 1
@@ -206,7 +240,7 @@ def plot_metrics(model):
     for j, metric in enumerate(model.history.history):
         # Skip les métriques de validation pour les afficher plus tard
         # sur le même subplot que la même métrique d'entraînement
-        if metric.find('val_') != -1:
+        if metric.find("val_") != -1:
             continue
         else:
             # Workaround pour subplot() qui veut rien savoir de retourner un array 1D quand on lui demande 1x1
@@ -215,13 +249,17 @@ def plot_metrics(model):
             else:
                 ax = axs
 
-            ax.plot([x + 1 for x in model.history.epoch],
-                     model.history.history[metric],
-                     label=metric)
-            if model.history.history.get('val_' + metric):
-                ax.plot([x + 1 for x in model.history.epoch],
-                         model.history.history['val_' + metric],
-                         label='validation ' + metric)
+            ax.plot(
+                [x + 1 for x in model.history.epoch],
+                model.history.history[metric],
+                label=metric,
+            )
+            if model.history.history.get("val_" + metric):
+                ax.plot(
+                    [x + 1 for x in model.history.epoch],
+                    model.history.history["val_" + metric],
+                    label="validation " + metric,
+                )
             ax.legend()
             ax.grid()
             ax.set_title(metric)
@@ -254,22 +292,26 @@ def creer_hist2D(data, title, nbin=15, plot=False):
     # affichage, commenter l'entièreté de ce qui suit si non désiré
     if plot:
         fig = plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.set_title(f'Densité de probabilité de {title}')
+        ax = plt.axes(projection="3d")
+        ax.set_title(f"Densité de probabilité de {title}")
 
         # calcule des bords des bins
-        xpos, ypos = np.meshgrid(xedges[:-1] + deltax / 2, yedges[:-1] + deltay / 2, indexing="ij")
+        xpos, ypos = np.meshgrid(
+            xedges[:-1] + deltax / 2, yedges[:-1] + deltay / 2, indexing="ij"
+        )
         dz = hist.ravel()
 
         # list of colors
         # https://matplotlib.org/stable/tutorials/colors/colormaps.html
-        cmap = cm.get_cmap('jet')  # Get desired colormap - you can change this!
+        cmap = cm.get_cmap("jet")  # Get desired colormap - you can change this!
         max_height = np.max(dz)  # get range of colorbars so we can normalize
         min_height = np.min(dz)
         # scale each z to [0,1], and get their rgb values
         rgba = [cmap((k - min_height) / max_height) for k in dz]
 
-        ax.bar3d(xpos.ravel(), ypos.ravel(), 0, deltax * .9, deltay * .9, dz, color=rgba)
+        ax.bar3d(
+            xpos.ravel(), ypos.ravel(), 0, deltax * 0.9, deltay * 0.9, dz, color=rgba
+        )
         # Fin "à commenter" si affichage non désiré
 
     return hist, xedges, yedges
@@ -281,22 +323,22 @@ def view3D(data3D, targets, title):
     :param data: tableau, les 3 colonnes sont les données x, y, z
     :param target: sert à distinguer les classes, expect un encodage one-hot
     """
-    colors = np.array([[1.0, 0.0, 0.0],  # Red
-                       [0.0, 1.0, 0.0],  # Green
-                       [0.0, 0.0, 1.0]])  # Blue
+    colors = np.array(
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]  # Red  # Green
+    )  # Blue
     c = colors[targets]
 
     fig = plt.figure(figsize=(8, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(data3D[:, 0], data3D[:, 1], data3D[:, 2], s=10.0, c=c, marker='x')
+    ax = fig.add_subplot(111, projection="3d")
+    ax.scatter(data3D[:, 0], data3D[:, 1], data3D[:, 2], s=10.0, c=c, marker="x")
     ax.set_title(title)
-    ax.set_xlabel('First component')
-    ax.set_ylabel('Second component')
-    ax.set_zlabel('Third component')
+    ax.set_xlabel("First component")
+    ax.set_ylabel("Second component")
+    ax.set_zlabel("Third component")
     fig.tight_layout()
 
 
-def calcModeleGaussien(data, message=''):
+def calcModeleGaussien(data, message=""):
     """
     Calcule les stats de base de données
     :param data: les données à traiter, devrait contenir 1 point N-D par ligne
@@ -304,12 +346,14 @@ def calcModeleGaussien(data, message=''):
     :return: la moyenne, la matrice de covariance, les valeurs propres et les vecteurs propres de "data"
     """
     # TODO L1.E2.2 Compléter le code avec les fonctions appropriées ici
-    moyenne = [1,2]
+    moyenne = [1, 2]
     matr_cov = [[2, 1], [1, 2]]
     val_propres, vect_propres = [1, 1], [[2, 1], [1, 2]]
     if message:
         print(message)
-        print(f'Moy: {moyenne} \nCov: {matr_cov} \nVal prop: {val_propres} \nVect prop: {vect_propres}')
+        print(
+            f"Moy: {moyenne} \nCov: {matr_cov} \nVal prop: {val_propres} \nVect prop: {vect_propres}"
+        )
     return moyenne, matr_cov, val_propres, vect_propres
 
 
@@ -331,8 +375,14 @@ def decorrelate(data, basis):
 
 def genDonneesTest(ndonnees, extent):
     # génération de n données aléatoires 2D sur une plage couverte par extent
-    return np.transpose(np.array([(extent.xmax - extent.xmin) * np.random.random(ndonnees) + extent.xmin,
-                                         (extent.ymax - extent.ymin) * np.random.random(ndonnees) + extent.ymin]))
+    return np.transpose(
+        np.array(
+            [
+                (extent.xmax - extent.xmin) * np.random.random(ndonnees) + extent.xmin,
+                (extent.ymax - extent.ymin) * np.random.random(ndonnees) + extent.ymin,
+            ]
+        )
+    )
 
 
 # usage: OUT = scale_data(IN, MINMAX)
@@ -373,5 +423,3 @@ def scaleDataKnownMinMax(x, minmax):
 def descaleData(x, minmax):
     y = ((x + 1.0) / 2) * (minmax[1] - minmax[0]) + minmax[0]
     return y
-
-

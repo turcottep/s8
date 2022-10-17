@@ -49,7 +49,7 @@ from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.optimizers import Adam
 
-import helpers.analysis as an
+import analysis as an
 
 
 def compute_prob_dens_gaussian(train_data, test_data1, test_data2):
@@ -71,7 +71,7 @@ def compute_prob_dens_gaussian(train_data, test_data1, test_data2):
     det_list = []
     inv_cov_list = []
     for i in range(x):
-        mean, cov, pouet, pouet  = an.calcModeleGaussien(train_data[i])
+        mean, cov, pouet, pouet = an.calcModeleGaussien(train_data[i])
         mean_list.append(mean)
         inv_cov = np.linalg.inv(cov)
         cov_list.append(cov)
@@ -99,7 +99,10 @@ def compute_prob_dens_gaussian(train_data, test_data1, test_data2):
         prob2 = 1 / np.sqrt(det_list[i] * (2 * np.pi) ** z) * np.exp(-mahalanobis2 / 2)
         dens_prob2.append(prob2)
 
-    return np.array(dens_prob1).T, np.array(dens_prob2).T  # reshape pour que les lignes soient les calculs pour 1 point original
+    return (
+        np.array(dens_prob1).T,
+        np.array(dens_prob2).T,
+    )  # reshape pour que les lignes soient les calculs pour 1 point original
 
 
 def ppv_classify(n_neighbors, train_data, classes, test1, test2=None):
@@ -114,9 +117,13 @@ def ppv_classify(n_neighbors, train_data, classes, test1, test2=None):
     # metric est le type de distance entre les points. La liste est disponible ici:
     # https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.DistanceMetric.html#sklearn.neighbors.DistanceMetric
     # TODO L2.E3.1 Compléter la logique pour utiliser la librairie ici
-    kNN = knn(1, metric='minkowski')  # minkowski correspond à distance euclidienne lorsque le paramètre p = 2
+    kNN = knn(
+        1, metric="minkowski"
+    )  # minkowski correspond à distance euclidienne lorsque le paramètre p = 2
     predictions_test1 = np.zeros(len(test1))  # classifie les données de test1
-    predictions_test2 = np.zeros(len(test2)) if np.asarray(test2).any() else np.asarray([])  # classifie les données de test2 si présentes
+    predictions_test2 = (
+        np.zeros(len(test2)) if np.asarray(test2).any() else np.asarray([])
+    )  # classifie les données de test2 si présentes
     return predictions_test1, predictions_test2
 
 
@@ -137,7 +144,9 @@ def kmean_alg(n_clusters, data):
         kmeans_C = km(1)
         kmeans_C.fit(np.array(data[i]))
         cluster_centers.append(kmeans_C.cluster_centers_)
-        cluster_labels[range(n_clusters * i, n_clusters * (i + 1))] = i  # assigne la classe en ordre ordinal croissant
+        cluster_labels[
+            range(n_clusters * i, n_clusters * (i + 1))
+        ] = i  # assigne la classe en ordre ordinal croissant
 
     if n_clusters == 1:  # gère les désagréments Python
         cluster_centers = np.array(cluster_centers)[:, 0]
@@ -171,42 +180,61 @@ def nn_classify(n_hidden_layers, n_neurons, train_data, classes, test1, test2=No
     # Create neural network
     # TODO L3.E2.6 Tune the number and size of hidden layers
     NNmodel = Sequential()
-    NNmodel.add(Dense(units=n_neurons, activation='tanh', input_shape=(data.shape[-1],)))
+    NNmodel.add(
+        Dense(units=n_neurons, activation="tanh", input_shape=(data.shape[-1],))
+    )
     for i in range(2, n_hidden_layers):
-        NNmodel.add(Dense(units=n_neurons, activation='tanh'))
-    NNmodel.add(Dense(units=targets.shape[-1], activation='tanh'))
+        NNmodel.add(Dense(units=n_neurons, activation="tanh"))
+    NNmodel.add(Dense(units=targets.shape[-1], activation="tanh"))
     print(NNmodel.summary())
 
     # Define training parameters
     # TODO L3.E2.6 Tune the training parameters
     # TODO L3.E2.1
-    NNmodel.compile(optimizer=Adam(), loss='binary_crossentropy', metrics=['accuracy'])
+    NNmodel.compile(optimizer=Adam(), loss="binary_crossentropy", metrics=["accuracy"])
 
     # Perform training
     # TODO L3.E2.4
-    callback_list = [K.callbacks.EarlyStopping(patience=50, verbose=1, restore_best_weights=1), print_every_N_epochs(25)]
+    callback_list = [
+        K.callbacks.EarlyStopping(patience=50, verbose=1, restore_best_weights=1),
+        print_every_N_epochs(25),
+    ]
     # TODO L3.E2.6 Tune the maximum number of iterations and desired error
     # TODO L3.E2.2 L3.E2.3
-    NNmodel.fit(training_data, training_target, batch_size=len(data), verbose=1,
-              epochs=10, shuffle=True, callbacks=[])
+    NNmodel.fit(
+        training_data,
+        training_target,
+        batch_size=len(data),
+        verbose=1,
+        epochs=10,
+        shuffle=True,
+        callbacks=[],
+    )
 
     # Save trained model to disk
-    NNmodel.save('3classes.h5')
+    NNmodel.save("3classes.h5")
     an.plot_metrics(NNmodel)
 
     # Test model (loading from disk)
     # TODO problématique: implement a mechanism to keep the best model and/or compare model performance across training runs
-    NNmodel = load_model('3classes.h5')
+    NNmodel = load_model("3classes.h5")
 
     # classifie les données de test
     # decode la sortie one hot en numéro de classe 0 à N directement
-    predictions_test1 = np.argmax(NNmodel.predict(an.scaleDataKnownMinMax(test1, minmax)), axis=1)
-    predictions_test2 = np.argmax(NNmodel.predict(an.scaleDataKnownMinMax(test2, minmax)), axis=1) \
-        if np.asarray(test2).any() else []  # classifie les données de test2 si présentes
+    predictions_test1 = np.argmax(
+        NNmodel.predict(an.scaleDataKnownMinMax(test1, minmax)), axis=1
+    )
+    predictions_test2 = (
+        np.argmax(NNmodel.predict(an.scaleDataKnownMinMax(test2, minmax)), axis=1)
+        if np.asarray(test2).any()
+        else []
+    )  # classifie les données de test2 si présentes
     return predictions_test1, predictions_test2
 
 
-def full_Bayes_risk(train_data, train_classes, donnee_test, title, extent, test_data, test_classes):
+def full_Bayes_risk(
+    train_data, train_classes, donnee_test, title, extent, test_data, test_classes
+):
     """
     Classificateur de Bayes complet pour des classes équiprobables (apriori égal)
     Selon le calcul direct du risque avec un modèle gaussien
@@ -223,7 +251,9 @@ def full_Bayes_risk(train_data, train_classes, donnee_test, title, extent, test_
     # calcule p(x|Ci) pour toutes les données étiquetées
     # rappel (c.f. exercice préparatoire)
     # ici le risque pour la classe i est pris comme 1 - p(x|Ci) au lien de la somme du risque des autres classes
-    prob_dens, prob_dens2 = compute_prob_dens_gaussian(train_data, donnee_test, test_data)
+    prob_dens, prob_dens2 = compute_prob_dens_gaussian(
+        train_data, donnee_test, test_data
+    )
     # donc minimiser le risque revient à maximiser p(x|Ci)
     classified = np.argmax(prob_dens, axis=1).reshape(len(donnee_test), 1)
     classified2 = np.argmax(prob_dens2, axis=1).reshape(test_classes.shape)
@@ -233,18 +263,38 @@ def full_Bayes_risk(train_data, train_classes, donnee_test, title, extent, test_
     error_indexes = calc_erreur_classification(test_classes, classified2)
     classified2[error_indexes] = error_class
     print(
-        f'Taux de classification moyen sur l\'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classified2))}%')
+        f"Taux de classification moyen sur l'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classified2))}%"
+    )
 
     train_data = np.array(train_data)
     x, y, z = train_data.shape
-    train_data = train_data.reshape(x*y, z)
+    train_data = train_data.reshape(x * y, z)
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
-    an.view_classification_results(train_data, donnee_test, train_classes, classified / error_class / .75,
-                                   f'Classification de Bayes, {title}', 'Données originales', 'Données aléatoires',
-                                   extent, test_data, classified2 / error_class / .75, 'Données d\'origine reclassées')
+    an.view_classification_results(
+        train_data,
+        donnee_test,
+        train_classes,
+        classified / error_class / 0.75,
+        f"Classification de Bayes, {title}",
+        "Données originales",
+        "Données aléatoires",
+        extent,
+        test_data,
+        classified2 / error_class / 0.75,
+        "Données d'origine reclassées",
+    )
 
 
-def full_ppv(n_neighbors, train_data, train_classes, datatest1, title, extent, datatest2=None, classestest2=None):
+def full_ppv(
+    n_neighbors,
+    train_data,
+    train_classes,
+    datatest1,
+    title,
+    extent,
+    datatest2=None,
+    classestest2=None,
+):
     """
     Classificateur PPV complet
     Utilise les données de train_data étiquetées dans train_classes pour créer un classificateur n_neighbors-PPV
@@ -252,7 +302,9 @@ def full_ppv(n_neighbors, train_data, train_classes, datatest1, title, extent, d
     Calcule le taux d'erreur moyen pour test2 le cas échéant
     Produit un graphique des résultats pour test1 et test2 le cas échéant
     """
-    predictions, predictions2 = ppv_classify(n_neighbors, train_data, train_classes.ravel(), datatest1, datatest2)
+    predictions, predictions2 = ppv_classify(
+        n_neighbors, train_data, train_classes.ravel(), datatest1, datatest2
+    )
     predictions = predictions.reshape(len(datatest1), 1)
 
     error_class = 6  # optionnel, assignation d'une classe différente à toutes les données en erreur, aide pour la visualisation
@@ -260,15 +312,27 @@ def full_ppv(n_neighbors, train_data, train_classes, datatest1, title, extent, d
         predictions2 = predictions2.reshape(len(datatest2), 1)
         # calcul des points en erreur à l'échelle du système
 
-        error_indexes = calc_erreur_classification(classestest2, predictions2.reshape(classestest2.shape))
+        error_indexes = calc_erreur_classification(
+            classestest2, predictions2.reshape(classestest2.shape)
+        )
         predictions2[error_indexes] = error_class
         print(
-            f'Taux de classification moyen sur l\'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classestest2))}%')
+            f"Taux de classification moyen sur l'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classestest2))}%"
+        )
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
-    an.view_classification_results(train_data, datatest1, train_classes, predictions, title, 'Représentants de classe',
-                                   f'Données aléatoires classées {n_neighbors}-PPV',
-                                   extent, datatest2, predictions2 / error_class / 0.75,
-                                   f'Prédiction de {n_neighbors}-PPV, données originales')
+    an.view_classification_results(
+        train_data,
+        datatest1,
+        train_classes,
+        predictions,
+        title,
+        "Représentants de classe",
+        f"Données aléatoires classées {n_neighbors}-PPV",
+        extent,
+        datatest2,
+        predictions2 / error_class / 0.75,
+        f"Prédiction de {n_neighbors}-PPV, données originales",
+    )
 
 
 def full_kmean(n_clusters, train_data, train_classes, title, extent):
@@ -284,13 +348,31 @@ def full_kmean(n_clusters, train_data, train_classes, title, extent):
     train_data = train_data.reshape(x * y, z)
 
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
-    an.view_classification_results(train_data, cluster_centers, train_classes, cluster_labels, title, 'Données d\'origine',
-                                   f'Clustering de {n_clusters}-Means', extent)
+    an.view_classification_results(
+        train_data,
+        cluster_centers,
+        train_classes,
+        cluster_labels,
+        title,
+        "Données d'origine",
+        f"Clustering de {n_clusters}-Means",
+        extent,
+    )
 
     return cluster_centers, cluster_labels
 
 
-def full_nn(n_hiddenlayers, n_neurons, train_data, train_classes, test1, title, extent, test2=None, classes2=None):
+def full_nn(
+    n_hiddenlayers,
+    n_neurons,
+    train_data,
+    train_classes,
+    test1,
+    title,
+    extent,
+    test2=None,
+    classes2=None,
+):
     """
     Classificateur RNA complet
     Utilise les données de train_data étiquetées dans train_classes pour entraîner un réseau de neurones
@@ -298,7 +380,9 @@ def full_nn(n_hiddenlayers, n_neurons, train_data, train_classes, test1, title, 
     Calcule le taux d'erreur moyen pour test2 le cas échéant
     Produit un graphique des résultats pour test1 et test2 le cas échéant
     """
-    predictions, predictions2 = nn_classify(n_hiddenlayers, n_neurons, train_data, train_classes.ravel(), test1, test2)
+    predictions, predictions2 = nn_classify(
+        n_hiddenlayers, n_neurons, train_data, train_classes.ravel(), test1, test2
+    )
     predictions = predictions.reshape(len(test1), 1)
 
     error_class = 6  # optionnel, assignation d'une classe différente à toutes les données en erreur, aide pour la visualisation
@@ -307,12 +391,23 @@ def full_nn(n_hiddenlayers, n_neurons, train_data, train_classes, test1, title, 
         # calcul des points en erreur à l'échelle du système
         error_indexes = calc_erreur_classification(classes2, predictions2)
         predictions2[error_indexes] = error_class
-        print(f'Taux de classification moyen sur l\'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classes2))}%')
+        print(
+            f"Taux de classification moyen sur l'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classes2))}%"
+        )
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
-    an.view_classification_results(train_data, test1, train_classes, predictions, title, 'Données originales',
-                                   f'Données aléatoires classées par le RNA',
-                                   extent, test2, predictions2 / error_class / 0.75,
-                                   f'Prédiction du RNA, données originales')
+    an.view_classification_results(
+        train_data,
+        test1,
+        train_classes,
+        predictions,
+        title,
+        "Données originales",
+        f"Données aléatoires classées par le RNA",
+        extent,
+        test2,
+        predictions2 / error_class / 0.75,
+        f"Prédiction du RNA, données originales",
+    )
 
 
 def calc_erreur_classification(original_data, classified_data):
@@ -322,7 +417,9 @@ def calc_erreur_classification(original_data, classified_data):
     # génère le vecteur d'erreurs de classification
     vect_err = np.absolute(original_data - classified_data).astype(bool)
     indexes = np.array(np.where(vect_err == True))[0]
-    print(f'\n\n{len(indexes)} erreurs de classification sur {len(original_data)} données')
+    print(
+        f"\n\n{len(indexes)} erreurs de classification sur {len(original_data)} données"
+    )
     # print(indexes)
     return indexes
 
@@ -372,13 +469,31 @@ def get_borders(data):
         # i.e. de la résolution analytique du risque de Bayes
         # partie numérique
         a = np.array(inv_cov_list[item[1]] - inv_cov_list[item[0]])
-        b = -np.array([2 * (np.dot(inv_cov_list[item[1]], avg_list[item[1]]) - np.dot(inv_cov_list[item[0]], avg_list[item[0]]))])
-        d = -(np.dot(np.dot(avg_list[item[0]], inv_cov_list[item[0]]), np.transpose(avg_list[item[0]])) -
-              np.dot(np.dot(avg_list[item[1]], inv_cov_list[item[1]]), np.transpose(avg_list[item[1]])))
+        b = -np.array(
+            [
+                2
+                * (
+                    np.dot(inv_cov_list[item[1]], avg_list[item[1]])
+                    - np.dot(inv_cov_list[item[0]], avg_list[item[0]])
+                )
+            ]
+        )
+        d = -(
+            np.dot(
+                np.dot(avg_list[item[0]], inv_cov_list[item[0]]),
+                np.transpose(avg_list[item[0]]),
+            )
+            - np.dot(
+                np.dot(avg_list[item[1]], inv_cov_list[item[1]]),
+                np.transpose(avg_list[item[1]]),
+            )
+        )
         c = -np.log(det_list[item[1]] / det_list[item[0]])
 
         # rappel: coef order: [x**2, xy, y**2, x, y, cst (cote droit log de l'equation de risque), cst (dans les distances de mahalanobis)]
-        border_coeffs.append([a[0, 0], a[0, 1] + a[1, 0], a[1, 1], b[0, 0], b[0, 1], c, d])
+        border_coeffs.append(
+            [a[0, 0], a[0, 1] + a[1, 0], a[1, 1], b[0, 0], b[0, 1], c, d]
+        )
         # print(border_coeffs[-1])
 
     return border_coeffs
@@ -388,13 +503,23 @@ class print_every_N_epochs(K.callbacks.Callback):
     """
     Helper callback pour remplacer l'affichage lors de l'entraînement
     """
+
     def __init__(self, N_epochs):
         self.epochs = N_epochs
 
     def on_epoch_end(self, epoch, logs=None):
         # TODO L3.E2.4
         if True:
-            print("Epoch: {:>3} | Loss: ".format(epoch) +
-                  f"{logs['loss']:.4e}" + " | Valid loss: " + f"{logs['val_loss']:.4e}" +
-                  (f" | Accuracy: {logs['accuracy']:.4e}" + " | Valid accuracy " + f"{logs['val_accuracy']:.4e}"
-                   if 'accuracy' in logs else "") )
+            print(
+                "Epoch: {:>3} | Loss: ".format(epoch)
+                + f"{logs['loss']:.4e}"
+                + " | Valid loss: "
+                + f"{logs['val_loss']:.4e}"
+                + (
+                    f" | Accuracy: {logs['accuracy']:.4e}"
+                    + " | Valid accuracy "
+                    + f"{logs['val_accuracy']:.4e}"
+                    if "accuracy" in logs
+                    else ""
+                )
+            )

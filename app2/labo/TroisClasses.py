@@ -12,15 +12,15 @@ Membres statiques:
 
 import numpy as np
 import os
-import helpers.analysis as an
+import analysis as an
 
 
 class TroisClasses:
 
     # Import data from text files in subdir
-    C1 = np.loadtxt('data_3classes'+os.sep+'C1.txt')
-    C2 = np.loadtxt('data_3classes'+os.sep+'C2.txt')
-    C3 = np.loadtxt('data_3classes'+os.sep+'C3.txt')
+    C1 = np.loadtxt("data_3classes" + os.sep + "C1.txt")
+    C2 = np.loadtxt("data_3classes" + os.sep + "C2.txt")
+    C3 = np.loadtxt("data_3classes" + os.sep + "C3.txt")
 
     # reorganisation en 1 seul vecteur pour la suite
     data = np.array([C1, C2, C3])

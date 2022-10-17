@@ -12,7 +12,7 @@ def get_noise_level(image_rgb):
     return noise_level
 
 
-def get_color_value_from_hsv(imageRGB, r, g, b):
+def get_color_value_from_hsv(imageRGB, color: str):
 
     imageHSV = skic.rgb2hsv(imageRGB)
 
@@ -24,22 +24,21 @@ def get_color_value_from_hsv(imageRGB, r, g, b):
     # calcul de la valeur de couleur de l'image
     # goal_hsv = skic.rgb2hsv(np.array([[[r, g, b]]]))[0][0]
 
-    goal_hue = skic.rgb2hsv(np.array([[[r, g, b]]]))[0][0][0]
-    # # print("goal_hue", goal_hue)
-    lower_bound_goal = np.array([goal_hue - 0.1, 0.2, 0.2])
-    upper_bound_goal = np.array([goal_hue + 0.1, 1, 1])
+    # if color == "red":
+    #     lower_bound = np.array([0, 0.5, 0.5])
+    #     upper_bound = np.array([0.1, 1, 1])
 
-    lower_bound_white = np.array([0, 0, 0.9])
-    upper_bound_white = np.array([1, 0.1, 1])
+    if color == "white":
+        lower_bound = np.array([0, 0, 0.9])
+        upper_bound = np.array([1, 0.1, 1])
 
-    lower_bound_grey = np.array([0, 0, 0.5])
-    upper_bound_grey = np.array([1, 0.1, 0.9])
+    if color == "grey":
+        lower_bound = np.array([0, 0, 0.5])
+        upper_bound = np.array([1, 0.1, 0.9])
 
-    lower_bound_green = np.array([80 / 360, 0.2, 0.2])
-    upper_bound_green = np.array([160 / 360, 1, 1])
-
-    lower_bound = lower_bound_green
-    upper_bound = upper_bound_green
+    if color == "green":
+        lower_bound = np.array([60 / 360, 0.2, 0.2])
+        upper_bound = np.array([160 / 360, 1, 1])
 
     nb_pixels_total = np.shape(imageHSV)[0] * np.shape(imageHSV)[1]
     nb_pixels_in_range = np.count_nonzero(
