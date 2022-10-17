@@ -14,16 +14,17 @@ from ImageCollection import ImageCollection
 def main():
     # Génère une liste de N images, les visualise et affiche leur histo de couleur
     # TODO: voir L1.E3 et problématique
-    N = 6
-    im_list = np.sort(random.sample(range(np.size(ImageCollection.image_list, 0)), N))
-    print(im_list)
+    image = ImageCollection()
+    # N = 6
+    # im_list = np.sort(random.sample(range(np.size(ImageCollection.image_list, 0)), N))
+    # print(im_list)
     # ImageCollection.images_display(im_list)
     # ImageCollection.view_histogrammes(im_list)
 
     # ImageCollection.get_all_noise_levels(im_list)
     # ImageCollection.get_color_values(im_list, 255, 0, 0)
 
-    ImageCollection.check_discrimination()
+    image.check_discrimination()
 
     plt.show()
 

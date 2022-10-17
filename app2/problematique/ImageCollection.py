@@ -10,13 +10,20 @@ Méthodes statiques: TODO JB move to helpers
     view_histogrammes: affiche les histogrammes de couleur de qq images identifiées en argument
 """
 
+from cProfile import label
+from turtle import color
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import glob
+from parameters import (
+    get_noise_level,
+    get_color_value_from_hsv,
+    get_value_from_rgb,
+    get_value_from_rgb_shelby,
+)
 from skimage import color as skic
 from skimage import io as skiio
-from skimage.restoration import estimate_sigma as skimage_estimate_sigma
 
 
 class ImageCollection:
@@ -38,8 +45,8 @@ class ImageCollection:
     # # Dimensions [980, 256, 256, 3]
     # #            [Nombre image, hauteur, largeur, RGB]
     # # TODO décommenter si voulu pour charger TOUTES les images
-    # images = np.array([np.array(skiio.imread(image)) for image in _path])
-    # all_images_loaded = True
+    images = np.array([np.array(skiio.imread(image)) for image in _path])
+    all_images_loaded = True
 
     def images_display(indexes):
         """
@@ -209,140 +216,7 @@ class ImageCollection:
             image_name = ImageCollection.image_list[indexes[num_images]]
             ax[num_images, 2].set_title(f"histogramme HSV de {image_name}")
 
-    def get_noise_levels(indexes):
-        """Returns a list of the noise levels of the images in the collection.
-        The noise level is the standard deviation of the noise in the image.
-        The noise is the difference between the image and its median filtered version.
-        """
-
-        noise_levels = []
-
-        for num_images in range(len(indexes)):
-            # charge une image si nécessaire
-            if ImageCollection.all_images_loaded:
-                imageRGB = ImageCollection.images[num_images]
-            else:
-                imageRGB = skiio.imread(
-                    ImageCollection.image_folder
-                    + os.sep
-                    + ImageCollection.image_list[indexes[num_images]]
-                )
-
-            noise_level = skimage_estimate_sigma(
-                imageRGB, multichannel=True, average_sigmas=True
-            )
-            noise_levels.append(noise_level)
-
-        for num_images in range(
-            len(indexes)
-        ):  # TODO L1.E3.6: afficher les niveaux de bruit dans la console
-            print(
-                "Niveau de bruit de l'image",
-                ImageCollection.image_list[indexes[num_images]],
-                "est",
-                noise_levels[num_images],
-            )
-        # print("Noise levels:", noise_levels)
-        return noise_levels
-
-    def get_color_values(indexes, r, g, b):
-        # returns how correlated the color is with the images
-        # r,g,b are the values of the color we want to check
-        # indexes are the indexes of the images we want to check
-        # returns a list of the correlation values
-        # the correlation value is the sum of the absolute value of the difference between the color and the image
-        # the lower the value, the more correlated the color is with the image
-        # the higher the value, the less correlated the color is with the image
-
-        color_values = []
-
-        for num_images in range(len(indexes)):
-            # charge une image si nécessaire
-            if ImageCollection.all_images_loaded:
-                imageRGB = ImageCollection.images[num_images]
-            else:
-                imageRGB = skiio.imread(
-                    ImageCollection.image_folder
-                    + os.sep
-                    + ImageCollection.image_list[indexes[num_images]]
-                )
-
-            imageHSV = skic.rgb2hsv(imageRGB)
-
-            # TODO L1.E3.7: calculer la valeur de couleur de l'image
-            # TODO L1.E3.8: ajouter la valeur de couleur calculée à la liste color_values
-            # TODO L1.E3.9: afficher les valeurs de couleur dans la console
-            # TODO L1.E3.10: afficher les valeurs de couleur dans un graphique
-
-            # calcul de la valeur de couleur de l'image
-            # goal_hsv = skic.rgb2hsv(np.array([[[r, g, b]]]))[0][0]
-
-            goal_hue = skic.rgb2hsv(np.array([[[r, g, b]]]))[0][0][0]
-            # # print("goal_hue", goal_hue)
-            # lower_bound = np.array([goal_hue - 0.1, 0.2, 0.2])
-            # upper_bound = np.array([goal_hue + 0.1, 1, 1])
-
-            lower_bound_white = np.array([0, 0, 0.9])
-            upper_bound_white = np.array([1, 0.1, 1])
-
-            lower_bound_grey = np.array([0, 0, 0.5])
-            upper_bound_grey = np.array([1, 0.1, 0.9])
-
-            lower_bound = lower_bound_grey
-            upper_bound = upper_bound_grey
-
-            nb_pixels_in_range = 0
-            nb_pixels_total = 0
-            for i in range(imageHSV.shape[0]):
-                for j in range(imageHSV.shape[1]):
-                    nb_pixels_total += 1
-                    if (
-                        imageHSV[i, j, 0] > lower_bound[0]
-                        and imageHSV[i, j, 0] < upper_bound[0]
-                        and imageHSV[i, j, 1] > lower_bound[1]
-                        and imageHSV[i, j, 1] < upper_bound[1]
-                        and imageHSV[i, j, 2] > lower_bound[2]
-                        and imageHSV[i, j, 2] < upper_bound[2]
-                    ):
-                        nb_pixels_in_range += 1
-
-            color_value = nb_pixels_in_range / nb_pixels_total
-            color_values.append(color_value)
-
-            # affichage des valeurs de couleur dans la console
-            print(
-                num_images,
-                "/",
-                len(indexes),
-                "Valeur de couleur de l'image",
-                ImageCollection.image_list[indexes[num_images]],
-                "est",
-                color_values[num_images],
-                end="\r",
-            )
-
-        # affichage des valeurs de couleur dans un graphique
-        fig, ax = plt.subplots()
-        ax.bar(range(len(indexes)), color_values)
-        ax.set(
-            xlabel="images",
-            ylabel="valeur de couleur",
-            title="Valeur de couleur pour chaque image",
-        )
-        # ajouter le titre de la photo observée pour chaque barre
-        for num_images in range(len(indexes)):
-            image_name = ImageCollection.image_list[indexes[num_images]]
-            ax.text(
-                num_images,
-                color_values[num_images],
-                image_name,
-                ha="center",
-                va="bottom",
-            )
-
-        return color_values
-
-    def check_discrimination():
+    def check_discrimination(self):
         """Checks if the images in the collection are discriminable.
         The images are considered discriminable if the noise level is different
         between the images.
@@ -352,7 +226,89 @@ class ImageCollection:
         # ou pas discriminables
         range_max = len(ImageCollection.image_list)
         # metrics = ImageCollection.get_noise_levels(range(range_max))
-        # metrics = ImageCollection.get_color_values(range(range_max), 255, 255, 0)
+
+        params_names = [
+            "noise_level",
+            "green",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+
+        colors = {
+            "coast": "blue",
+            "forest": "green",
+            "street": "gray",
+            "unknown": "black",
+        }
+
+        images_object_list = []
+        for i in range(range_max):
+            print("Image", i, "/", range_max, end="\r")
+            image_name = self.image_list[i]
+            if image_name.startswith("coast"):
+                type = "coast"
+            elif image_name.startswith("forest"):
+                type = "forest"
+            elif image_name.startswith("street"):
+                type = "street"
+            else:
+                type = "unknown"
+
+            noise_level = get_noise_level(self.images[i])
+
+            green_level = get_color_value_from_hsv(self.images[i], 1, 1, 1)
+            # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
+
+            # print(i, "noise_level", param)
+            graph_color = colors[type]
+
+            params = [noise_level, green_level, 0, 0, 0, 0, 0, 0, 0, 0]
+
+            img_obj = {
+                "image": image_name,
+                "type": type,
+                "params": params,
+                "graph_color": graph_color,
+            }
+            images_object_list.append(img_obj)
+
+        # print(images_object_list)
+
+        # sort by class
+        images_object_list.sort(key=lambda x: x["type"])
+
+        param_index = 1
+
+        # get average and standard deviation for each class for noise level
+        param_by_class = []
+        for type in colors.keys():
+            param_by_class.append(
+                [
+                    x["params"][param_index]
+                    for x in images_object_list
+                    if x["type"] == type
+                ]
+            )
+
+        print("noise_levels", param_by_class)
+
+        # get average and standard deviation for each class for noise level
+        param_mean = []
+        param_std = []
+        for param in param_by_class:
+            param_mean.append(np.mean(param))
+            param_std.append(np.std(param))
+
+        print("noise_levels_mean", param_mean)
+        print("noise_levels_std", param_std)
+
+        # metrics = ImageCollection.get_color_values(range(range_max), 255, 0, 0)
 
         # classify by name on wether the name starts with coast, forest or street
         # and then check if the noise levels are different
@@ -361,21 +317,39 @@ class ImageCollection:
         # TODO L1.E3.7: afficher un message dans la console si les images sont discriminables
         # ou pas discriminables
 
-        classes = []
-        for i in range(range_max):
-            if ImageCollection.image_list[i].startswith("coast"):
-                classes.append("coast")
-            elif ImageCollection.image_list[i].startswith("forest"):
-                classes.append("forest")
-            elif ImageCollection.image_list[i].startswith("street"):
-                classes.append("street")
-            else:
-                classes.append("unknown")
-        print("classes:", classes)
-
-        # plot the noise levels depending on the class to see if there is clustering
+        # plot the distribution of the metrics for each class
         plt.figure()
-        plt.scatter(classes, metrics, alpha=0.1)
-        plt.xlabel("classes")
-        plt.ylabel("grey levels")
-        plt.title("grey levels depending on the class")
+
+        for i in range(range_max):
+            plt.plot(
+                i,
+                images_object_list[i]["params"][param_index],
+                "o",
+                label=images_object_list[i]["type"],
+                color=images_object_list[i]["graph_color"],
+            )
+
+        # plt.legend()
+
+        # draw horizontal lines for the mean and standard deviation
+        for i in range(len(colors)):
+            plt.axhline(
+                param_mean[i],
+                color=colors[list(colors.keys())[i]],
+                linestyle="--",
+            )
+            plt.axhline(
+                param_mean[i] - param_std[i],
+                color=colors[list(colors.keys())[i]],
+                linestyle=":",
+            )
+            plt.axhline(
+                param_mean[i] + param_std[i],
+                color=colors[list(colors.keys())[i]],
+                linestyle=":",
+            )
+
+        # plt.scatter(classes, metrics, alpha=0.1)
+        # plt.xlabel("classes")
+        # plt.ylabel("noise levels")
+        plt.title(params_names[param_index] + " depending on the class")
