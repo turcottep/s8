@@ -352,7 +352,7 @@ class ImageCollection:
         # ou pas discriminables
         range_max = len(ImageCollection.image_list)
         # metrics = ImageCollection.get_noise_levels(range(range_max))
-        # metrics = ImageCollection.get_color_values(range(range_max), 255, 255, 0)
+        metrics = ImageCollection.get_color_values(range(range_max), 255, 255, 0)
 
         # classify by name on wether the name starts with coast, forest or street
         # and then check if the noise levels are different
