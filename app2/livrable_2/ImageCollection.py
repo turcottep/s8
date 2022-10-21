@@ -271,8 +271,8 @@ class ImageCollection:
             image_name = ImageCollection.image_list[indexes[num_images]]
             ax[num_images, 2].set_title(f"histogramme HSV de {image_name}")
 
-    def get_images_object_list(self, range_temp):
-        range_max = range_temp
+    def get_images_object_list(self):
+        range_max = 5  # len(ImageCollection.image_list)
 
         images_object_list = []
         for i in range(range_max):
@@ -326,10 +326,8 @@ class ImageCollection:
         # sort by class
         images_object_list.sort(key=lambda x: x["type"])
 
-        return images_object_list
-
     def generate_representation(self):
-        images_object_list = self.get_images_object_list(5)
+        images_object_list = self.get_images_object_list()
 
         data_images = np.zeros(
             (len(images_object_list), len(images_object_list[0]["params"]))
@@ -356,10 +354,12 @@ class ImageCollection:
         The images are considered discriminable if the noise level is different
         between the images.
         """
-        range_max = len(ImageCollection.image_list)
-        images_object_list = self.get_images_object_list(range_max)
+        range_max = 5  # len(ImageCollection.image_list)
+        images_object_list = self.get_images_object_list()
 
-        print("images_object_list", images_object_list)
+        # TODO L1.E3.7: afficher un message dans la console si les images sont discriminables
+        # ou pas discriminables
+        # metrics = ImageCollection.get_noise_levels(range(range_max))
 
         # houghLines et sobelxy
 

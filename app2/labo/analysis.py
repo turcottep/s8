@@ -89,13 +89,22 @@ def viewEllipse(data, ax, scale=1, facecolor="none", edgecolor="red", **kwargs):
 
     retourne l'objet Ellipse créé
     """
-    moy, cov, lambdas, vectors = calcModeleGaussien(data)
-    # TODO L2.E1.2 Remplacer les valeurs bidons par les bons paramètres à partir des stats ici
+    moyenne, covariance_matrix, val_propres, vect_propres = calcModeleGaussien(data)
+
+    ellipse_x = moyenne[0]
+    ellipse_y = moyenne[1]
+    ellipse_angle = math.atan2(vect_propres[1, 0], vect_propres[0, 0]) * 180 / math.pi
+
+    # Ellipse at 2 sigma
+    ellipse_width = 2 * scale * math.sqrt(val_propres[0]) * 2
+    ellipse_height = 2 * scale * math.sqrt(val_propres[1]) * 2
+
+    # DONEDO L2.E1.2 Remplacer les valeurs bidons par les bons paramètres à partir des stats ici
     ellipse = Ellipse(
-        (1, 1),
-        width=scale,
-        height=scale,
-        angle=0,
+        (ellipse_x, ellipse_y),
+        width=ellipse_width,
+        height=ellipse_height,
+        angle=ellipse_angle,
         facecolor=facecolor,
         edgecolor=edgecolor,
         linewidth=2,
@@ -278,13 +287,13 @@ def creer_hist2D(data, title, nbin=15, plot=False):
     x = np.array(data[:, 0])
     y = np.array(data[:, 1])
 
-    # TODO L2.E1.1 Faire du pseudocode et implémenter une segmentation en bins...
-    # pas des bins de l'histogramme
-    deltax = 1
-    deltay = 1
+    # DONEDO L2.E1.1 Bin segmentation
+    deltax = (np.max(x) - np.min(x)) / nbin
+    deltay = (np.max(y) - np.min(y)) / nbin
 
-    # TODO : remplacer les valeurs bidons par la bonne logique ici
-    hist, xedges, yedges = np.histogram2d([1, 1], [1, 1], bins=[1, 1])
+    # DONEDO : remplacer les valeurs bidons par la bonne logique ici
+    hist, xedges, yedges = np.histogram2d(x, y, bins=nbin, range=None, density=True)
+
     # normalise par la somme (somme de densité de prob = 1)
     histsum = np.sum(hist)
     hist = hist / histsum
@@ -345,15 +354,20 @@ def calcModeleGaussien(data, message=""):
     :param message: si présent, génère un affichage des stats calculées
     :return: la moyenne, la matrice de covariance, les valeurs propres et les vecteurs propres de "data"
     """
-    # TODO L1.E2.2 Compléter le code avec les fonctions appropriées ici
-    moyenne = [1, 2]
-    matr_cov = [[2, 1], [1, 2]]
-    val_propres, vect_propres = [1, 1], [[2, 1], [1, 2]]
-    if message:
-        print(message)
-        print(
-            f"Moy: {moyenne} \nCov: {matr_cov} \nVal prop: {val_propres} \nVect prop: {vect_propres}"
-        )
+    # DONEDO L1.E2.2 Compléter le code avec les fonctions appropriées ici
+    # moyenne = [1, 2]
+    # matr_cov = [[2, 1], [1, 2]]
+    # val_propres, vect_propres = [1, 1], [[2, 1], [1, 2]]
+    # if message:
+    #     print(message)
+    #     print(
+    #         f"Moy: {moyenne} \nCov: {matr_cov} \nVal prop: {val_propres} \nVect prop: {vect_propres}"
+    #     )
+
+    moyenne = np.mean(data, axis=0)
+    matr_cov = np.cov(data, rowvar=False)
+    val_propres, vect_propres = np.linalg.eig(matr_cov)
+
     return moyenne, matr_cov, val_propres, vect_propres
 
 
@@ -366,10 +380,13 @@ def decorrelate(data, basis):
     """
     dims = np.asarray(data).shape
     decorrelated = np.zeros(np.asarray(data).shape)
+
+    print("data shape", dims, "basis shape", basis.shape)
+
     for i in range(dims[0]):
         tempdata = data[i]
-        # TODO L1.E2.5 Remplacer l'opération bidon par la bonne projection ici
-        decorrelated[i] = tempdata
+        # DONEDO L1.E2.5 decorrelate data
+        decorrelated[i] = tempdata.dot(basis)
     return decorrelated
 
 

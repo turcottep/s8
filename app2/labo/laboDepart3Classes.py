@@ -13,6 +13,8 @@ from TroisClasses import TroisClasses
 import analysis as an
 import classifiers
 
+import numpy as np
+
 
 ##########################################
 def main():
@@ -40,17 +42,23 @@ def main():
     )
 
     # exemple d'une densité de probabilité arbitraire pour 1 classe
-    an.creer_hist2D(TroisClasses.C1, "C1")
+    an.creer_hist2D(TroisClasses.C1, "C1", plot=True)
 
     # génération de données aléatoires
     ndonnees = 5000
     donneesTest = an.genDonneesTest(ndonnees, TroisClasses.extent)
     # Changer le flag dans les sections pertinentes pour chaque partie de laboratoire
-    if False:  # TODO L2.E2.2
+    if True:  # TODO L2.E2.2
 
         # classification
         # Bayes
         #                           (train_data, train_classes, donnee_test, title, extent, test_data, test_classes)
+
+        # print all parameters
+        print("all_classes", np.array(allClasses).shape)
+        print("class_labels", TroisClasses.class_labels.shape)
+        print("extent", TroisClasses.extent)
+
         classifiers.full_Bayes_risk(
             allClasses,
             TroisClasses.class_labels,
@@ -61,11 +69,11 @@ def main():
             TroisClasses.class_labels,
         )
 
-    if False:  # TODO L2.E3
+    if True:  # TODO L2.E3
         # 1-PPV avec comme représentants de classes l'ensemble des points déjà classés
         #           full_ppv(n_neighbors, train_data, train_classes, datatest1, title, extent, datatest2=None, classestest2=None)
         classifiers.full_ppv(
-            1,
+            10,
             TroisClasses.data,
             TroisClasses.class_labels,
             donneesTest,
@@ -75,15 +83,19 @@ def main():
 
         # 1-mean sur chacune des classes
         # suivi d'un 1-PPV avec ces nouveaux représentants de classes
+
+        n_clusters = 5
+        n_neighbors = 3
+
         cluster_centers, cluster_labels = classifiers.full_kmean(
-            1,
+            n_clusters,
             allClasses,
             TroisClasses.class_labels,
             "Représentants des 1-moy",
             TroisClasses.extent,
         )
         classifiers.full_ppv(
-            1,
+            n_neighbors,
             cluster_centers,
             cluster_labels,
             donneesTest,
@@ -96,7 +108,8 @@ def main():
     if False:  # TODO L3.E2
         # nn puis visualisation des frontières
         n_hidden_layers = 2
-        n_neurons = 5
+        n_neurons = 25
+
         classifiers.full_nn(
             n_hidden_layers,
             n_neurons,
