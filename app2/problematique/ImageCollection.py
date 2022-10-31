@@ -496,71 +496,70 @@ class ImageCollection:
         #         alpha=0.5,
         #     )
 
+    def classify_images(self):
+        [data, labels] = self.generate_representation()
+        # data = data.reshape(data.shape[0], 1, -1)
+        print("data", data)
+        print("labels", labels)
+        # print("data.shape", data.shape)
 
-def classify_images(self):
-    [data, labels] = self.generate_representation()
-    # data = data.reshape(data.shape[0], 1, -1)
-    print("data", data)
-    print("labels", labels)
-    # print("data.shape", data.shape)
+        print("labels.shape", labels.shape)
+        extent = an.Extent(ptList=data)
 
-    print("labels.shape", labels.shape)
-    extent = an.Extent(ptList=data)
+        # donneesTest = an.genDonneesTest(ndonnees, TroisClasses.extent)
 
-    # donneesTest = an.genDonneesTest(ndonnees, TroisClasses.extent)
+        # BAYES
 
-    # BAYES
+        classifiers.full_Bayes_risk(
+            data,
+            labels,
+            data,  # todo: change to test data
+            "Bayes risque #1",
+            extent,  # todo: change to test extent
+            data,  # todo: change to test data
+            labels,  #   todo: change to test labels
+        )
 
-    classifiers.full_Bayes_risk(
-        data,
-        labels,
-        data,  # todo: change to test data
-        "Bayes risque #1",
-        extent,  # todo: change to test extent
-        data,  # todo: change to test data
-        labels,  #   todo: change to test labels
-    )
+        #  KNN
 
-    #  KNN
+        # n_clusters = 5  # car les nuages de points sont dispersés dans plusieurs dimensions avec une forme bizarroide, mais on ne veut pas inclure les données aberrantes et on veut garder le temps de calcul raisonnable
+        # n_neighbors = 3  # car on veut faire la moyenne dans le cas ou on est à la limite de deux classes, puisqu'on a plusieurs points par classe et que certains sont donc plus éloignés du centre que d'autres
 
-    n_clusters = 5  # car les nuages de points sont dispersés dans plusieurs dimensions avec une forme bizarroide, mais on ne veut pas inclure les données aberrantes et on veut garder le temps de calcul raisonnable
-    n_neighbors = 3  # car on veut faire la moyenne dans le cas ou on est à la limite de deux classes, puisqu'on a plusieurs points par classe et que certains sont donc plus éloignés du centre que d'autres
+        # cluster_centers, cluster_labels = classifiers.full_kmean(
+        #     n_clusters,
+        #     data,
+        #     labels,
+        #     "Représentants des 1-moy",
+        #     extent,
+        # )
+        # classifiers.full_ppv(
+        #     n_neighbors,
+        #     cluster_centers,
+        #     cluster_labels,
+        #     data,  # todo: change to test data
+        #     "1-PPV sur le 1-moy",
+        #     extent,
+        #     data,
+        #     labels,
+        # )
 
-    cluster_centers, cluster_labels = classifiers.full_kmean(
-        n_clusters,
-        data,
-        labels,
-        "Représentants des 1-moy",
-        extent,
-    )
-    classifiers.full_ppv(
-        n_neighbors,
-        cluster_centers,
-        cluster_labels,
-        data,  # todo: change to test data
-        "1-PPV sur le 1-moy",
-        extent,
-        data,
-        labels,
-    )
+        # ## NN
 
-    ## NN
+        # n_hidden_layers = 2  # car c'est suffisant dans la plupart des cas selon la littérature (notes de cours)
+        # n_neurons = 25  # car on veut être plus gros que le nombre de features en input, mais pas trop pour ne pas sur-apprendre
+        # learning_rate = 0.01  # standard, à vérifier avec la courbe d'apprentissage
+        # nb_epochs = 1000  # beaucoup d'époques, mais avec un stop early
+        # activation_function = "tanh"  # parce que le réseau n'a pas beaucoup de couches cachées et que la fonction tanh est plus efficace que la fonction sigmoïde
+        # loss_function = "binary_crossentropy"  # parce que c'est une classification binaire pour les différentes classes
 
-    n_hidden_layers = 2  # car c'est suffisant dans la plupart des cas selon la littérature (notes de cours)
-    n_neurons = 25  # car on veut être plus gros que le nombre de features en input, mais pas trop pour ne pas sur-apprendre
-    learning_rate = 0.01  # standard, à vérifier avec la courbe d'apprentissage
-    nb_epochs = 1000  # beaucoup d'époques, mais avec un stop early
-    activation_function = "tanh"  # parce que le réseau n'a pas beaucoup de couches cachées et que la fonction tanh est plus efficace que la fonction sigmoïde
-    loss_function = "binary_crossentropy"  # parce que c'est une classification binaire pour les différentes classes
-
-    classifiers.full_nn(
-        n_hidden_layers,
-        n_neurons,
-        data,
-        labels,
-        data,  # todo: change to test data
-        f"NN {n_hidden_layers} layer(s) caché(s), {n_neurons} neurones par couche",
-        extent,
-        data,
-        labels,
-    )
+        # classifiers.full_nn(
+        #     n_hidden_layers,
+        #     n_neurons,
+        #     data,
+        #     labels,
+        #     data,  # todo: change to test data
+        #     f"NN {n_hidden_layers} layer(s) caché(s), {n_neurons} neurones par couche",
+        #     extent,
+        #     data,
+        #     labels,
+        # )

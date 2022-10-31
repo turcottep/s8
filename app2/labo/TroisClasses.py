@@ -37,3 +37,13 @@ class TroisClasses:
 
     # Min et max des données
     extent = an.Extent(ptList=data)
+
+
+if __name__ == "__main__":
+    print("Classe TroisClasses")
+    print("C1: ", TroisClasses.C1)
+    print("C2: ", TroisClasses.C2)
+    print("C3: ", TroisClasses.C3)
+    print("data: ", TroisClasses.data)
+    print("class_labels: ", TroisClasses.class_labels)
+    print("extent: ", TroisClasses.extent)
