@@ -211,9 +211,9 @@ def view_classification_results(
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
         ax3.scatter(test2[:, 0], test2[:, 1], s=5, c=cmap(c3))
         ax3.set_title(title3)
-        ax3.set_xlim([extent.xmin, extent.xmax])
-        ax3.set_ylim([extent.ymin, extent.ymax])
-        ax3.axes.set_aspect("equal")
+        # ax3.set_xlim([extent.xmin, extent.xmax])
+        # ax3.set_ylim([extent.ymin, extent.ymax])
+        # ax3.axes.set_aspect("equal")
     else:
         fig, (ax1, ax2) = plt.subplots(2, 1)
     fig.suptitle(glob_title)
@@ -221,12 +221,12 @@ def view_classification_results(
     ax2.scatter(test1[:, 0], test1[:, 1], s=5, c=c2, cmap="viridis")
     ax1.set_title(title1)
     ax2.set_title(title2)
-    ax1.set_xlim([extent.xmin, extent.xmax])
-    ax1.set_ylim([extent.ymin, extent.ymax])
-    ax2.set_xlim([extent.xmin, extent.xmax])
-    ax2.set_ylim([extent.ymin, extent.ymax])
-    ax1.axes.set_aspect("equal")
-    ax2.axes.set_aspect("equal")
+    # ax1.set_xlim([extent.xmin, extent.xmax])
+    # ax1.set_ylim([extent.ymin, extent.ymax])
+    # ax2.set_xlim([extent.xmin, extent.xmax])
+    # ax2.set_ylim([extent.ymin, extent.ymax])
+    # ax1.axes.set_aspect("equal")
+    # ax2.axes.set_aspect("equal")
 
 
 def plot_metrics(model):

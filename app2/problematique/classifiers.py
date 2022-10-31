@@ -61,8 +61,11 @@ def compute_prob_dens_gaussian(train_data, test_data1, test_data2):
     retourne un tableau de la valeur de la densité de prob pour chaque point dans test_data1 et un autre pour
         test_data2 par rapport à chaque classe
     """
-    train_data = np.array(train_data)
-    x, y, z = train_data.shape
+    # train_data = np.array(train_data)
+    x = len(train_data)  # nombre de classes
+    z = train_data[0].shape[1]  # nombre de dimensions
+    # print("Nombre de classes: ", x)
+    # print("Nombre de dimensions: ", z)
 
     # bâtit la liste de toutes les stats
     # i.e. un modèle
@@ -72,7 +75,13 @@ def compute_prob_dens_gaussian(train_data, test_data1, test_data2):
     det_list = []
     inv_cov_list = []
     for i in range(x):
-        mean, cov, pouet, pouet = an.calcModeleGaussien(train_data[i])
+        # print("train_data[i]")
+        # print(train_data[i])
+        mean, cov, _, _ = an.calcModeleGaussien(train_data[i])
+        # print("Moyenne de la classe ", i, ": ")
+        # print(mean)
+        # print("Covariance de la classe ", i, ": ")
+        # print(cov)
         mean_list.append(mean)
         inv_cov = np.linalg.inv(cov)
         cov_list.append(cov)
@@ -163,8 +172,9 @@ def kmean_alg(n_clusters, data):
     Retourne la suite des représentants de classes et leur étiquette
     Documentation: https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
     """
-    data = np.array(data)
-    x, y, z = data.shape
+    # data = np.array(data)
+    # x, y, z = data.shape
+    x = len(data)
 
     cluster_centers = []
     cluster_labels = np.zeros((n_clusters * x, 1))
@@ -187,7 +197,9 @@ def kmean_alg(n_clusters, data):
     return cluster_centers, cluster_labels
 
 
-def nn_classify(n_hidden_layers, n_neurons, train_data, classes, test1, test2=None):
+def nn_classify(
+    n_hidden_layers, n_neurons, train_data, classes, test1, test2=None, n_epochs=100
+):
     """
     Classifie test1 et test2 au moyen d'un réseau de neurones entraîné avec train_data et les sorties voulues "classes"
     Retourne les prédictions pour chaque point dans test1, test2
@@ -195,11 +207,16 @@ def nn_classify(n_hidden_layers, n_neurons, train_data, classes, test1, test2=No
     # (e.g. filtering, normalization, dimensionality reduction)
     data, minmax = an.scaleData(train_data)
 
+    print("Data scaled")
+    print(data)
+    print("data shape", data.shape)
+
     # Convertit la représentation des étiquettes pour utiliser plus facilement la cross-entropy comme loss
     # TODO L3.E2.1
     encoder = OneHotEncoder(sparse=False)
     targets = classes
     print("targets", targets)
+    print("targets shape", targets.shape)
     targets = targets.reshape(len(targets), 1)
     target_one_hot = encoder.fit_transform(targets)
     print("target_one_hot", target_one_hot)
@@ -208,7 +225,7 @@ def nn_classify(n_hidden_layers, n_neurons, train_data, classes, test1, test2=No
     # Crée des ensembles d'entraînement et de validation
     # TODO L3.E2.3
     [training_data, validation_data, training_target, validation_target] = ttsplit(
-        data, target_one_hot, test_size=0.2, random_state=42
+        data, target_one_hot, test_size=0.2
     )
 
     # Create neural network
@@ -219,13 +236,17 @@ def nn_classify(n_hidden_layers, n_neurons, train_data, classes, test1, test2=No
     )
     for i in range(2, n_hidden_layers):
         NNmodel.add(Dense(units=n_neurons, activation="tanh"))
-    NNmodel.add(Dense(units=targets.shape[-1], activation="tanh"))
+    NNmodel.add(Dense(units=target_one_hot.shape[-1], activation="softmax"))
     print(NNmodel.summary())
 
     # Define training parameters
     # TODO L3.E2.6 Tune the training parameters
     # TODO L3.E2.1
-    NNmodel.compile(optimizer=Adam(), loss="binary_crossentropy", metrics=["accuracy"])
+    NNmodel.compile(
+        optimizer=Adam(),
+        loss="categorical_crossentropy",
+        metrics=["accuracy"],
+    )
 
     # Perform training
     # TODO L3.E2.4
@@ -240,7 +261,7 @@ def nn_classify(n_hidden_layers, n_neurons, train_data, classes, test1, test2=No
         training_target,
         batch_size=len(data),
         verbose=0,
-        epochs=1000,
+        epochs=n_epochs,
         validation_data=(validation_data, validation_target),
         shuffle=True,
         callbacks=callback_list,
@@ -290,7 +311,7 @@ def full_Bayes_risk(
         train_data, donnee_test, test_data
     )
 
-    print("prob_dens", prob_dens, "prob_dens2", prob_dens2)
+    # print("prob_dens", prob_dens, "prob_dens2", prob_dens2)
 
     # donc minimiser le risque revient à maximiser p(x|Ci)
     classified = np.argmax(prob_dens, axis=1).reshape(len(donnee_test), 1)
@@ -304,12 +325,12 @@ def full_Bayes_risk(
         f"Taux de classification moyen sur l'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classified2))}%"
     )
 
-    train_data = np.array(train_data)
-    x, y, z = train_data.shape
-    train_data = train_data.reshape(x * y, z)
+    # train_data = np.array(train_data)
+    # x, y, z = train_data.shape
+    # train_data = train_data.reshape(x * y, z)
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
     an.view_classification_results(
-        train_data,
+        test_data,
         donnee_test,
         train_classes,
         classified / error_class / 0.75,
@@ -347,6 +368,7 @@ def full_ppv(
 
     error_class = 6  # optionnel, assignation d'une classe différente à toutes les données en erreur, aide pour la visualisation
     if np.asarray(datatest2).any():
+        classestest2 = classestest2.reshape(classestest2.shape[0], 1)
         predictions2 = predictions2.reshape(len(datatest2), 1)
         # calcul des points en erreur à l'échelle du système
 
@@ -373,7 +395,7 @@ def full_ppv(
     )
 
 
-def full_kmean(n_clusters, train_data, train_classes, title, extent):
+def full_kmean(n_clusters, train_data, train_classes, title, extent, data_long=None):
     """
     Exécute l'algorithme des n_clusters-moyennes sur les données de train_data étiquetées dans train_classes
     Produit un graphique des représentants de classes résultants
@@ -381,13 +403,13 @@ def full_kmean(n_clusters, train_data, train_classes, title, extent):
     """
     cluster_centers, cluster_labels = kmean_alg(n_clusters, train_data)
 
-    train_data = np.array(train_data)
-    x, y, z = train_data.shape
-    train_data = train_data.reshape(x * y, z)
+    # train_data = np.array(train_data)
+    # x, y, z = train_data.shape
+    # train_data = train_data.reshape(x * y, z)
 
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
     an.view_classification_results(
-        train_data,
+        data_long,
         cluster_centers,
         train_classes,
         cluster_labels,
@@ -410,6 +432,7 @@ def full_nn(
     extent,
     test2=None,
     classes2=None,
+    n_epochs=100,
 ):
     """
     Classificateur RNA complet
@@ -419,13 +442,24 @@ def full_nn(
     Produit un graphique des résultats pour test1 et test2 le cas échéant
     """
     predictions, predictions2 = nn_classify(
-        n_hiddenlayers, n_neurons, train_data, train_classes.ravel(), test1, test2
+        n_hiddenlayers,
+        n_neurons,
+        train_data,
+        train_classes.ravel(),
+        test1,
+        test2,
+        n_epochs=n_epochs,
     )
+
     predictions = predictions.reshape(len(test1), 1)
+
+    print("predictions:")
+    print(predictions)
 
     error_class = 6  # optionnel, assignation d'une classe différente à toutes les données en erreur, aide pour la visualisation
     if np.asarray(test2).any():
         predictions2 = predictions2.reshape(len(test2), 1)
+        classes2 = classes2.reshape(classes2.shape[0], 1)
         # calcul des points en erreur à l'échelle du système
         error_indexes = calc_erreur_classification(classes2, predictions2)
         predictions2[error_indexes] = error_class

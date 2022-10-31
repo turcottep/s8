@@ -10,6 +10,8 @@ Méthodes statiques: TODO JB move to helpers
     view_histogrammes: affiche les histogrammes de couleur de qq images identifiées en argument
 """
 
+import json
+from TroisClasses import TroisClasses
 import classifiers
 import analysis as an
 
@@ -272,84 +274,99 @@ class ImageCollection:
             ax[num_images, 2].set_title(f"histogramme HSV de {image_name}")
 
     def get_images_object_list(self, range_temp):
-        range_max = range_temp
+        # range_max = range_temp
 
-        images_object_list = []
-        for i in range(range_max):
-            print("Image", i, "/", range_max, end="\r")
-            image_name = self.image_list[i]
+        # images_object_list = []
+        # for i in range(range_max):
+        #     print("Image", i, "/", range_max, end="\r")
+        #     image_name = self.image_list[i]
 
-            main_class_type = image_name.split("_")[0]
-            class_type = image_name.split("_")[0] + "_" + image_name.split("_")[1]
+        #     main_class_type = image_name.split("_")[0]
+        #     class_type = image_name.split("_")[0] + "_" + image_name.split("_")[1]
 
-            noise_level = get_noise_level(self.images[i])
+        #     noise_level = get_noise_level(self.images[i])
 
-            green_level = get_color_value_from_hsv(self.images[i], "green")
+        #     green_level = get_color_value_from_hsv(self.images[i], "green")
+        #     green_level_random = green_level + np.random.normal(0, 0.1)
 
-            blue_level = get_color_value_from_hsv(self.images[i], "blue")
+        #     blue_level = get_color_value_from_hsv(self.images[i], "blue")
 
-            grey_level = get_color_value_from_hsv(self.images[i], "grey")
+        #     grey_level = get_color_value_from_hsv(self.images[i], "grey")
 
-            corners = get_square_value(self.images[i])
+        #     corners = get_square_value(self.images[i])
 
-            light_pixel = get_light_pixel_top_image(self.images[i])
+        #     light_pixel = get_light_pixel_top_image(self.images[i])
 
-            # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
+        #     # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
 
-            # print(i, "noise_level", param)
-            graph_color = colors[class_type]
+        #     # print(i, "noise_level", param)
+        #     graph_color = colors[class_type]
 
-            params = [
-                noise_level,
-                green_level,
-                blue_level,
-                grey_level,
-                corners,
-                light_pixel,
-                0,
-                0,
-                0,
-                0,
-            ]
+        #     params = [
+        #         noise_level,
+        #         green_level,
+        #         blue_level,
+        #         grey_level,
+        #         corners,
+        #         light_pixel,
+        #         # 0,
+        #         # 0,
+        #         # 0,
+        #         # 0,
+        #     ]
 
-            img_obj = {
-                "image": image_name,
-                "type": class_type,
-                "type_int": class_list[main_class_type],
-                "params": params,
-                "graph_color": graph_color,
-            }
-            images_object_list.append(img_obj)
+        #     # print("params", params)
 
-        # print(images_object_list)
+        #     img_obj = {
+        #         "image": image_name,
+        #         "type": class_type,
+        #         "type_int": class_list[main_class_type],
+        #         "params": params,
+        #         "graph_color": graph_color,
+        #     }
+        #     images_object_list.append(img_obj)
 
-        # sort by class
-        images_object_list.sort(key=lambda x: x["type"])
+        # # print(images_object_list)
+
+        # # sort by class
+        # images_object_list.sort(key=lambda x: x["type"])
+
+        # # save to file
+        # with open("images_object_list.json", "w") as outfile:
+        #     json.dump(images_object_list, outfile)
+
+        images_object_list = None
+        # load from file
+        with open("images_object_list.json") as json_file:
+            images_object_list = json.load(json_file)
+
+        # print("images_object_list", images_object_list)
 
         return images_object_list
 
     def generate_representation(self):
-        images_object_list = self.get_images_object_list(5)
+        images_object_list = self.get_images_object_list(len(self.image_list))
 
         data_images = np.zeros(
             (len(images_object_list), len(images_object_list[0]["params"]))
         )
 
         classes_list = [[] for i in range(len(class_list))]
-        print("classes_list", classes_list)
+        # print("classes_list", classes_list)
 
         images_labels = np.zeros(len(images_object_list))
 
         for i in range(len(images_object_list)):
-            data_images[i] = images_object_list[i]["params"]
+            data_images[i, :] = images_object_list[i]["params"]
             images_labels[i] = images_object_list[i]["type_int"]
-            classes_list[images_object_list[i]["type_int"]].append(
-                images_object_list[i]["params"]
-            )
+            class_index = images_object_list[i]["type_int"]
+            classes_list[class_index].append(images_object_list[i]["params"])
 
-        print("classes_list", classes_list)
+        # convert classes_list to numpy array
+        for i in range(len(classes_list)):
+            classes_list[i] = np.array(classes_list[i])
 
-        return classes_list, images_labels
+        return data_images, classes_list, images_labels
 
     def check_discrimination(self):
         """Checks if the images in the collection are discriminable.
@@ -497,33 +514,81 @@ class ImageCollection:
         #     )
 
     def classify_images(self):
-        [data, labels] = self.generate_representation()
+        [data_long, data, labels] = self.generate_representation()
         # data = data.reshape(data.shape[0], 1, -1)
-        print("data", data)
-        print("labels", labels)
+        # print("data", data)
+        # print("data_long")
+        # print(data_long)
+        # print("labels", labels)
         # print("data.shape", data.shape)
-
-        print("labels.shape", labels.shape)
-        extent = an.Extent(ptList=data)
+        # print("labels.shape", labels.shape)
+        extent = None  # an.ExtentNDim(ptList=data_long)
 
         # donneesTest = an.genDonneesTest(ndonnees, TroisClasses.extent)
 
+        c1 = TroisClasses.C1
+        c2 = TroisClasses.C2
+        c3 = TroisClasses.C3
+        print("c1", c1.shape)
+        print("c2", c2.shape)
+        print("c3", c3.shape)
+        fake_data = [TroisClasses.C1, TroisClasses.C2, TroisClasses.C3]
+        print("fake_data", fake_data)
+        fake_data_long = np.concatenate(fake_data, axis=0)
+        print("fake_data_long", fake_data_long.shape)
+        fake_extent = None  # an.ExtentNDim(ptList=fake_data_long)
+
+        fake_labels = TroisClasses.class_labels
+        print("fake_labels", fake_labels)
+
         # BAYES
 
-        classifiers.full_Bayes_risk(
-            data,
-            labels,
-            data,  # todo: change to test data
-            "Bayes risque #1",
-            extent,  # todo: change to test extent
-            data,  # todo: change to test data
-            labels,  #   todo: change to test labels
-        )
+        # # classifiers.full_Bayes_risk(
+        # #     fake_data,
+        # #     fake_labels,
+        # #     fake_data_long,
+        # #     "Bayes risque #1",
+        # #     fake_extent,
+        # #     fake_data_long,
+        # #     fake_labels,
+        # # )
+
+        # classifiers.full_Bayes_risk(
+        #     data,
+        #     labels,
+        #     data_long,  # todo: change to test data
+        #     "Bayes risque #1",
+        #     extent,  # todo: change to test extent
+        #     data_long,  # todo: change to test data
+        #     labels,  #   todo: change to test labels
+        # )
 
         #  KNN
 
-        # n_clusters = 5  # car les nuages de points sont dispersés dans plusieurs dimensions avec une forme bizarroide, mais on ne veut pas inclure les données aberrantes et on veut garder le temps de calcul raisonnable
-        # n_neighbors = 3  # car on veut faire la moyenne dans le cas ou on est à la limite de deux classes, puisqu'on a plusieurs points par classe et que certains sont donc plus éloignés du centre que d'autres
+        # n_clusters = 9  # 9
+        # n_neighbors = 4  # 4
+
+        # cluster_centers, cluster_labels = classifiers.full_kmean(
+        #     n_clusters,
+        #     fake_data,
+        #     fake_labels,
+        #     "Représentants des 1-moy",
+        #     fake_extent,
+        # )
+
+        # print("cluster_centers", cluster_centers)
+        # print("cluster_labels", cluster_labels)
+
+        # classifiers.full_ppv(
+        #     n_neighbors,
+        #     cluster_centers,
+        #     cluster_labels,
+        #     fake_data_long,
+        #     "1-PPV sur le 1-moy",
+        #     fake_extent,
+        #     fake_data_long,
+        #     fake_labels,
+        # )
 
         # cluster_centers, cluster_labels = classifiers.full_kmean(
         #     n_clusters,
@@ -531,35 +596,44 @@ class ImageCollection:
         #     labels,
         #     "Représentants des 1-moy",
         #     extent,
+        #     data_long=data_long,
         # )
+
+        # print("cluster_centers", cluster_centers)
+        # print("cluster_labels", cluster_labels)
+
         # classifiers.full_ppv(
         #     n_neighbors,
         #     cluster_centers,
         #     cluster_labels,
-        #     data,  # todo: change to test data
-        #     "1-PPV sur le 1-moy",
+        #     data_long,
+        #     f"{n_neighbors}-PPV sur le {n_clusters}-moy",
         #     extent,
-        #     data,
+        #     data_long,
         #     labels,
         # )
 
-        # ## NN
+        ## NN
 
-        # n_hidden_layers = 2  # car c'est suffisant dans la plupart des cas selon la littérature (notes de cours)
-        # n_neurons = 25  # car on veut être plus gros que le nombre de features en input, mais pas trop pour ne pas sur-apprendre
-        # learning_rate = 0.01  # standard, à vérifier avec la courbe d'apprentissage
-        # nb_epochs = 1000  # beaucoup d'époques, mais avec un stop early
-        # activation_function = "tanh"  # parce que le réseau n'a pas beaucoup de couches cachées et que la fonction tanh est plus efficace que la fonction sigmoïde
-        # loss_function = "binary_crossentropy"  # parce que c'est une classification binaire pour les différentes classes
+        n_hidden_layers = 2  # car c'est suffisant dans la plupart des cas selon la littérature (notes de cours)
+        n_neurons = 25  # car on veut être plus gros que le nombre de features en input, mais pas trop pour ne pas sur-apprendre
+        learning_rate = 0.01  # standard, à vérifier avec la courbe d'apprentissage
+        nb_epochs = 1000  # beaucoup d'époques, mais avec un stop early
+        activation_function = "tanh"  # parce que le réseau n'a pas beaucoup de couches cachées et que la fonction tanh est plus efficace que la fonction sigmoïde
+        loss_function = "binary_crossentropy"  # parce que c'est une classification binaire pour les différentes classes
 
-        # classifiers.full_nn(
-        #     n_hidden_layers,
-        #     n_neurons,
-        #     data,
-        #     labels,
-        #     data,  # todo: change to test data
-        #     f"NN {n_hidden_layers} layer(s) caché(s), {n_neurons} neurones par couche",
-        #     extent,
-        #     data,
-        #     labels,
-        # )
+        n_hidden_layers = 3
+        n_neurons = 5
+
+        classifiers.full_nn(
+            n_hidden_layers,
+            n_neurons,
+            data_long,
+            labels,
+            data_long,
+            f"NN {n_hidden_layers} layer(s) caché(s), {n_neurons} neurones par couche",
+            extent,
+            data_long,
+            labels,
+            n_epochs=1000,
+        )

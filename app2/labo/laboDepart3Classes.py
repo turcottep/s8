@@ -48,7 +48,7 @@ def main():
     ndonnees = 5000
     donneesTest = an.genDonneesTest(ndonnees, TroisClasses.extent)
     # Changer le flag dans les sections pertinentes pour chaque partie de laboratoire
-    if True:  # TODO L2.E2.2
+    if False:  # TODO L2.E2.2
 
         # classification
         # Bayes
@@ -69,7 +69,7 @@ def main():
             TroisClasses.class_labels,
         )
 
-    if True:  # TODO L2.E3
+    if False:  # TODO L2.E3
         # 1-PPV avec comme représentants de classes l'ensemble des points déjà classés
         #           full_ppv(n_neighbors, train_data, train_classes, datatest1, title, extent, datatest2=None, classestest2=None)
         classifiers.full_ppv(
@@ -105,7 +105,7 @@ def main():
             TroisClasses.class_labels,
         )
 
-    if False:  # TODO L3.E2
+    if True:  # TODO L3.E2
         # nn puis visualisation des frontières
         n_hidden_layers = 2
         n_neurons = 25
