@@ -426,6 +426,27 @@ def scaleDataKnownMinMax(x, minmax):
     return y
 
 
+def scaleDataNdim(x):
+
+    # normalize data to [-1, 1] in each dimension
+
+    minmax = np.zeros((x.shape[0], 2))
+    y = np.zeros_like(x)
+    for i in range(x.shape[0]):
+        y[i, :] = (x[i, :] - np.min(x[i, :])) / (np.max(x[i, :]) - np.min(x[i, :]))
+        minmax[i, 0] = np.min(x[i, :])
+        minmax[i, 1] = np.max(x[i, :])
+
+    return y, minmax
+
+
+def scaleDataKnownMinMaxNdim(x, minmax):
+    y = np.zeros_like(x)
+    for i in range(x.shape[0]):
+        y[i, :] = (x[i, :] - minmax[i, 0]) / (minmax[i, 1] - minmax[i, 0])
+    return y
+
+
 # usage: OUT = descale_data(IN, MINMAX)
 #
 # Descale an input vector or matrix so that the values

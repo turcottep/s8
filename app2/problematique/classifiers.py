@@ -207,20 +207,20 @@ def nn_classify(
     # (e.g. filtering, normalization, dimensionality reduction)
     data, minmax = an.scaleData(train_data)
 
-    print("Data scaled")
-    print(data)
-    print("data shape", data.shape)
+    # print("Data scaled")
+    # print(data)
+    # print("data shape", data.shape)
 
     # Convertit la représentation des étiquettes pour utiliser plus facilement la cross-entropy comme loss
     # TODO L3.E2.1
     encoder = OneHotEncoder(sparse=False)
     targets = classes
-    print("targets", targets)
-    print("targets shape", targets.shape)
+    # print("targets", targets)
+    # print("targets shape", targets.shape)
     targets = targets.reshape(len(targets), 1)
     target_one_hot = encoder.fit_transform(targets)
-    print("target_one_hot", target_one_hot)
-    print("last layer", target_one_hot.shape[1])
+    # print("target_one_hot", target_one_hot)
+    # print("last layer", target_one_hot.shape[1])
 
     # Crée des ensembles d'entraînement et de validation
     # TODO L3.E2.3
@@ -366,6 +366,10 @@ def full_ppv(
     )
     predictions = predictions.reshape(len(datatest1), 1)
 
+    validation_score = 0
+
+    error_indexes = []
+
     error_class = 6  # optionnel, assignation d'une classe différente à toutes les données en erreur, aide pour la visualisation
     if np.asarray(datatest2).any():
         classestest2 = classestest2.reshape(classestest2.shape[0], 1)
@@ -375,10 +379,12 @@ def full_ppv(
         error_indexes = calc_erreur_classification(
             classestest2, predictions2.reshape(classestest2.shape)
         )
-        predictions2[error_indexes] = error_class
+        # predictions2[error_indexes] = error_class
         print(
             f"Taux de classification moyen sur l'ensemble des classes, {title}: {100 * (1 - len(error_indexes) / len(classestest2))}%"
         )
+        validation_score = 100 * (1 - len(error_indexes) / len(classestest2))
+
     #  view_classification_results(train_data, test1, c1, c2, glob_title, title1, title2, extent, test2=None, c3=None, title3=None)
     an.view_classification_results(
         train_data,
@@ -393,6 +399,7 @@ def full_ppv(
         predictions2 / error_class / 0.75,
         f"Prédiction de {n_neighbors}-PPV, données originales",
     )
+    return validation_score, error_indexes, predictions2
 
 
 def full_kmean(n_clusters, train_data, train_classes, title, extent, data_long=None):
@@ -453,8 +460,8 @@ def full_nn(
 
     predictions = predictions.reshape(len(test1), 1)
 
-    print("predictions:")
-    print(predictions)
+    # print("predictions:")
+    # print(predictions)
 
     error_class = 6  # optionnel, assignation d'une classe différente à toutes les données en erreur, aide pour la visualisation
     if np.asarray(test2).any():

@@ -55,14 +55,20 @@ class_list = {
     "street": 2,
 }
 
+invert_class_list = {
+    0: "coast",
+    1: "forest",
+    2: "street",
+}
+
 colors = {
     "coast_normal": "blue",
-    "coast_beach": "blue",  # "yellow",
-    "coast_sunset": "blue",  # "red",
+    "coast_beach": "yellow",
+    "coast_sunset": "red",
     "forest_green": "green",
-    "forest_fall": "green",  # "orange",
-    "forest_white": "green",  # "black",
-    "street_normal": "orange",  # "gray",
+    "forest_fall": "orange",
+    "forest_white": "black",
+    "street_normal": "gray",
     "unknown": "black",
 }
 
@@ -274,66 +280,67 @@ class ImageCollection:
             ax[num_images, 2].set_title(f"histogramme HSV de {image_name}")
 
     def get_images_object_list(self, range_temp):
-        # range_max = range_temp
+        if False:  # get parameters from images or json file
+            range_max = range_temp
 
-        # images_object_list = []
-        # for i in range(range_max):
-        #     print("Image", i, "/", range_max, end="\r")
-        #     image_name = self.image_list[i]
+            images_object_list = []
+            for i in range(range_max):
+                print("Image", i, "/", range_max, end="\r")
+                image_name = self.image_list[i]
 
-        #     main_class_type = image_name.split("_")[0]
-        #     class_type = image_name.split("_")[0] + "_" + image_name.split("_")[1]
+                main_class_type = image_name.split("_")[0]
+                class_type = image_name.split("_")[0] + "_" + image_name.split("_")[1]
 
-        #     noise_level = get_noise_level(self.images[i])
+                noise_level = get_noise_level(self.images[i])
 
-        #     green_level = get_color_value_from_hsv(self.images[i], "green")
-        #     green_level_random = green_level + np.random.normal(0, 0.1)
+                green_level = get_color_value_from_hsv(self.images[i], "green")
+                green_level_random = green_level + np.random.normal(0, 0.1)
 
-        #     blue_level = get_color_value_from_hsv(self.images[i], "blue")
+                blue_level = get_color_value_from_hsv(self.images[i], "blue")
 
-        #     grey_level = get_color_value_from_hsv(self.images[i], "grey")
+                grey_level = get_color_value_from_hsv(self.images[i], "grey")
 
-        #     corners = get_square_value(self.images[i])
+                corners = get_square_value(self.images[i])
 
-        #     light_pixel = get_light_pixel_top_image(self.images[i])
+                light_pixel = get_light_pixel_top_image(self.images[i])
 
-        #     # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
+                # self.get_color_value_from_hsv(self.images[i], 0, 255, 0)
 
-        #     # print(i, "noise_level", param)
-        #     graph_color = colors[class_type]
+                # print(i, "noise_level", param)
+                graph_color = colors[class_type]
 
-        #     params = [
-        #         noise_level,
-        #         green_level,
-        #         blue_level,
-        #         grey_level,
-        #         corners,
-        #         light_pixel,
-        #         # 0,
-        #         # 0,
-        #         # 0,
-        #         # 0,
-        #     ]
+                params = [
+                    noise_level,
+                    green_level,
+                    blue_level,
+                    grey_level,
+                    corners,
+                    light_pixel,
+                    # 0,
+                    # 0,
+                    # 0,
+                    # 0,
+                ]
 
-        #     # print("params", params)
+                # print("params", params)
 
-        #     img_obj = {
-        #         "image": image_name,
-        #         "type": class_type,
-        #         "type_int": class_list[main_class_type],
-        #         "params": params,
-        #         "graph_color": graph_color,
-        #     }
-        #     images_object_list.append(img_obj)
+                img_obj = {
+                    "image": image_name,
+                    "type": class_type,
+                    "type_int": class_list[main_class_type],
+                    "params": params,
+                    "graph_color": graph_color,
+                }
+                images_object_list.append(img_obj)
 
-        # # print(images_object_list)
+            # print(images_object_list)
 
-        # # sort by class
-        # images_object_list.sort(key=lambda x: x["type"])
+            # sort by class
+            images_object_list.sort(key=lambda x: x["type"])
 
-        # # save to file
-        # with open("images_object_list.json", "w") as outfile:
-        #     json.dump(images_object_list, outfile)
+            # save to file
+            with open("images_object_list.json", "w") as outfile:
+                json.dump(images_object_list, outfile)
 
         images_object_list = None
         # load from file
@@ -380,34 +387,6 @@ class ImageCollection:
 
         # houghLines et sobelxy
 
-        param_index_a = 3
-        param_index_b = 4
-
-        param_index = 3
-
-        # get average and standard deviation for each class for noise level
-        param_by_class = []
-        for type in colors.keys():
-            param_by_class.append(
-                [
-                    x["params"][param_index]
-                    for x in images_object_list
-                    if x["type"] == type
-                ]
-            )
-
-        # print("noise_levels", param_by_class)
-
-        # get average and standard deviation for each class for noise level
-        param_mean = []
-        param_std = []
-        for param in param_by_class:
-            param_mean.append(np.mean(param))
-            param_std.append(np.std(param))
-
-        # print("noise_levels_mean", param_mean)
-        # print("noise_levels_std", param_std)
-
         # metrics = ImageCollection.get_color_values(range(range_max), 255, 0, 0)
 
         # classify by name on wether the name starts with coast, forest or street
@@ -418,222 +397,325 @@ class ImageCollection:
         # ou pas discriminables
 
         #### 1 d plot #####
+        if True:
+            param_index = 0
 
-        # # plot the distribution of the metrics for each class
-        # plt.figure()
-
-        # for i in range(range_max):
-        #     plt.plot(
-        #         i,
-        #         images_object_list[i]["params"][param_index],
-        #         "o",
-        #         label=images_object_list[i]["type"],
-        #         color=images_object_list[i]["graph_color"],
-        #     )
-
-        # # plt.legend()
-
-        # # draw horizontal lines for the mean and standard deviation
-        # for i in range(len(colors)):
-        #     plt.axhline(
-        #         param_mean[i],
-        #         color=colors[list(colors.keys())[i]],
-        #         linestyle="--",
-        #     )
-        #     plt.axhline(
-        #         param_mean[i] - param_std[i],
-        #         color=colors[list(colors.keys())[i]],
-        #         linestyle=":",
-        #     )
-        #     plt.axhline(
-        #         param_mean[i] + param_std[i],
-        #         color=colors[list(colors.keys())[i]],
-        #         linestyle=":",
-        #     )
-
-        # # plt.scatter(classes, metrics, alpha=0.1)
-        # # plt.xlabel("classes")
-        # # plt.ylabel("noise levels")
-        # plt.title(params_names[param_index] + " depending on the class")
-
-        #### 2 d plot #####
-        plt.figure()
-
-        # generate all possible combinations of parameters
-        param_combinations = list(itertools.combinations(range(6), 2))
-        print("param_combinations", param_combinations)
-        print("param_combinations", len(param_combinations))
-
-        subplot_dim = (4, 4)
-        ax, fig = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(20, 20))
-        # fig.tight_layout()
-
-        for i, param_combination in enumerate(param_combinations):
-            print("i", i)
-            param_index_a = param_combination[0]
-            param_index_b = param_combination[1]
-            print("param_index_a", param_index_a, "param_index_b", param_index_b)
-            plt.subplot(subplot_dim[0], subplot_dim[1], i + 1)
-
-            for j in range(range_max):
-                plt.plot(
-                    images_object_list[j]["params"][param_index_a],
-                    images_object_list[j]["params"][param_index_b],
-                    "o",
-                    label=images_object_list[j]["type"],
-                    color=images_object_list[j]["graph_color"],
-                    alpha=0.1,
+            # get average and standard deviation for each class for noise level
+            param_by_class = []
+            for type in colors.keys():
+                param_by_class.append(
+                    [
+                        x["params"][param_index]
+                        for x in images_object_list
+                        if x["type"] == type
+                    ]
                 )
 
-            # hide the x and y ticks
-            plt.xticks([])
-            plt.yticks([])
+            # print("noise_levels", param_by_class)
 
-            # hide the x and y values
-            plt.tick_params(axis="both", which="both", length=0)
+            # get average and standard deviation for each class for noise level
+            param_mean = []
+            param_std = []
+            for param in param_by_class:
+                param_mean.append(np.mean(param))
+                param_std.append(np.std(param))
 
-            # add axis labels to the inside of the plot
-            plt.xlabel(params_names[param_index_a])
-            plt.ylabel(params_names[param_index_b])
-            # ax.axes.xaxis.set_label_coords(0.5, -0.1)
-            # ax.axes.yaxis.set_label_coords(-0.1, 0.5)
+            # print("noise_levels_mean", param_mean)
+            # print("noise_levels_std", param_std)
+
+            # plot the distribution of the metrics for each class
+            plt.figure()
+
+            for i in range(range_max):
+
+                plt.plot(
+                    i,
+                    images_object_list[i]["params"][param_index],
+                    "o",
+                    # label=images_object_list[i]["type"],
+                    color=images_object_list[i]["graph_color"],
+                )
+
+            # colors = {
+            #     "coast_normal": "blue",
+            #     "coast_beach": "yellow",
+            #     "coast_sunset": "red",
+            #     "forest_green": "green",
+            #     "forest_fall": "orange",
+            #     "forest_white": "black",
+            #     "street_normal": "gray",
+            # }
+            plt.plot(0, 0, "o", label="coast_normal", color=colors["coast_normal"])
+            plt.plot(0, 0, "o", label="coast_beach", color=colors["coast_beach"])
+            plt.plot(0, 0, "o", label="coast_sunset", color=colors["coast_sunset"])
+            plt.plot(0, 0, "o", label="forest_green", color=colors["forest_green"])
+            plt.plot(0, 0, "o", label="forest_fall", color=colors["forest_fall"])
+            plt.plot(0, 0, "o", label="forest_white", color=colors["forest_white"])
+            plt.plot(0, 0, "o", label="street_normal", color=colors["street_normal"])
+
+            plt.legend()
+
+            # draw horizontal lines for the mean and standard deviation
+            for i in range(len(colors)):
+                plt.axhline(
+                    param_mean[i],
+                    color=colors[list(colors.keys())[i]],
+                    linestyle="--",
+                )
+                plt.axhline(
+                    param_mean[i] - param_std[i],
+                    color=colors[list(colors.keys())[i]],
+                    linestyle=":",
+                )
+                plt.axhline(
+                    param_mean[i] + param_std[i],
+                    color=colors[list(colors.keys())[i]],
+                    linestyle=":",
+                )
+
+            # plt.scatter(classes, metrics, alpha=0.1)
+            # plt.xlabel("classes")
+            # plt.ylabel("noise levels")
+            plt.title(params_names[param_index] + " depending on the class")
+
+        #### 2 d plot #####
+        if False:
+            plt.figure()
+
+            param_index_a = 3
+            param_index_b = 4
+
+            # generate all possible combinations of parameters
+            param_combinations = list(itertools.combinations(range(6), 2))
+            print("param_combinations", param_combinations)
+            print("param_combinations", len(param_combinations))
+
+            subplot_dim = (4, 4)
+            ax, fig = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(20, 20))
+            # fig.tight_layout()
+
+            for i, param_combination in enumerate(param_combinations):
+                print("i", i)
+                param_index_a = param_combination[0]
+                param_index_b = param_combination[1]
+                print("param_index_a", param_index_a, "param_index_b", param_index_b)
+                plt.subplot(subplot_dim[0], subplot_dim[1], i + 1)
+
+                for j in range(range_max):
+                    plt.plot(
+                        images_object_list[j]["params"][param_index_a],
+                        images_object_list[j]["params"][param_index_b],
+                        "o",
+                        label=images_object_list[j]["type"],
+                        color=images_object_list[j]["graph_color"],
+                        alpha=0.1,
+                    )
+
+                # hide the x and y ticks
+                plt.xticks([])
+                plt.yticks([])
+
+                # hide the x and y values
+                plt.tick_params(axis="both", which="both", length=0)
+
+                # add axis labels to the inside of the plot
+                plt.xlabel(params_names[param_index_a])
+                plt.ylabel(params_names[param_index_b])
+                # ax.axes.xaxis.set_label_coords(0.5, -0.1)
+                # ax.axes.yaxis.set_label_coords(-0.1, 0.5)
 
         #### 3 d plot #####
-        # fig = plt.figure()
+        if False:
+            fig = plt.figure()
 
-        # ax = fig.add_subplot(111, projection="3d")
+            ax = fig.add_subplot(111, projection="3d")
 
-        # for i in range(range_max):
-        #     ax.scatter(
-        #         images_object_list[i]["params"][4],
-        #         images_object_list[i]["params"][1],
-        #         images_object_list[i]["params"][2],
-        #         label=images_object_list[i]["type"],
-        #         color=images_object_list[i]["graph_color"],
-        #         alpha=0.5,
+            for i in range(range_max):
+                ax.scatter(
+                    images_object_list[i]["params"][4],
+                    images_object_list[i]["params"][1],
+                    images_object_list[i]["params"][2],
+                    label=images_object_list[i]["type"],
+                    color=images_object_list[i]["graph_color"],
+                    alpha=0.5,
+                )
+
+    def get_training_test_data(self, perc_train):
+        [data_long, data, labels] = self.generate_representation()
+
+        # split into training and test set
+        data_train = [[], [], []]
+        data_test = [[], [], []]
+        for class_index in range(len(data)):
+            data_train[class_index] = data[class_index][
+                : int(len(data[class_index]) * perc_train)
+            ]
+            data_test[class_index] = data[class_index][
+                int(len(data[class_index]) * perc_train) :
+            ]
+        labels_train = labels[: int(len(labels) * perc_train)]
+        labels_test = labels[int(len(labels) * perc_train) :]
+        data_long_train = data_long[: int(len(data_long) * perc_train)]
+        data_long_test = data_long[int(len(data_long) * perc_train) :]
+
+        return [
+            data_train,
+            data_test,
+            labels_train,
+            labels_test,
+            data_long_train,
+            data_long_test,
+        ]
+
+    def classify_images_bayes(self):
+
+        [data_long, data, labels] = self.generate_representation()
+
+        classifiers.full_Bayes_risk(
+            data,
+            labels,
+            data_long,  # todo: change to test data
+            "Bayes risque #1",
+            None,  # todo: change to test extent
+            data_long,  # todo: change to test data
+            labels,  #   todo: change to test labels
+        )
+
+    def classify_images_knn(self):
+        [
+            data_train,
+            data_test,
+            labels_train,
+            labels_test,
+            data_long_train,
+            data_long_test,
+        ] = self.get_training_test_data(perc_train=0.8)
+
+        min_classes = min(len(data_train[0]), len(data_train[1]), len(data_train[2]))
+        print("min_classes", min_classes)
+
+        best_n_neighbors = 1
+        best_n_clusters = min_classes
+
+        # best_score = 0
+        # all_scores = []
+        # all_clusters = []
+
+        # for i in range(1, min_classes):
+        #     n_clusters = i
+        #     cluster_centers, cluster_labels = classifiers.kmean_alg(
+        #         n_clusters, data_train
         #     )
 
-    def classify_images(self):
-        [data_long, data, labels] = self.generate_representation()
-        # data = data.reshape(data.shape[0], 1, -1)
-        # print("data", data)
-        # print("data_long")
-        # print(data_long)
-        # print("labels", labels)
-        # print("data.shape", data.shape)
-        # print("labels.shape", labels.shape)
-        extent = None  # an.ExtentNDim(ptList=data_long)
+        #     for j in range(1, 2):  # 3 * i):
+        #         n_neighbors = j
 
-        # donneesTest = an.genDonneesTest(ndonnees, TroisClasses.extent)
+        #         score = classifiers.full_ppv(
+        #             best_n_neighbors,
+        #             cluster_centers,
+        #             cluster_labels,
+        #             data_long_train,
+        #             f"{best_n_neighbors}-PPV sur le {best_n_clusters}-moy",
+        #             extent,
+        #             data_long_test,
+        #             labels_test,
+        #         )
 
-        c1 = TroisClasses.C1
-        c2 = TroisClasses.C2
-        c3 = TroisClasses.C3
-        print("c1", c1.shape)
-        print("c2", c2.shape)
-        print("c3", c3.shape)
-        fake_data = [TroisClasses.C1, TroisClasses.C2, TroisClasses.C3]
-        print("fake_data", fake_data)
-        fake_data_long = np.concatenate(fake_data, axis=0)
-        print("fake_data_long", fake_data_long.shape)
-        fake_extent = None  # an.ExtentNDim(ptList=fake_data_long)
+        #         all_scores.append(score)
+        #         all_clusters.append(n_clusters)
 
-        fake_labels = TroisClasses.class_labels
-        print("fake_labels", fake_labels)
+        #         if score > best_score:
+        #             best_score = score
+        #             best_n_neighbors = n_neighbors
+        #             best_n_clusters = n_clusters
+        #             print(
+        #                 f"best_score {best_score} best_n_neighbors {best_n_neighbors} best_n_clusters {best_n_clusters}\n\n"
+        #             )
+        #         else:
+        #             print(
+        #                 f"score {score} n_neighbors {n_neighbors} n_clusters {n_clusters}------------------------------------------------",
+        #                 end="\r",
+        #             )
 
-        # BAYES
+        # # display graph
+        # plt.plot(all_clusters, all_scores)
+        # plt.xlabel("n_clusters")
+        # plt.ylabel("percentage of good classification")
+        # plt.title("Tuning of the number of clusters")
+        # plt.show()
 
-        # # classifiers.full_Bayes_risk(
-        # #     fake_data,
-        # #     fake_labels,
-        # #     fake_data_long,
-        # #     "Bayes risque #1",
-        # #     fake_extent,
-        # #     fake_data_long,
-        # #     fake_labels,
-        # # )
+        cluster_centers, cluster_labels = classifiers.kmean_alg(
+            best_n_clusters, data_train
+        )
 
-        # classifiers.full_Bayes_risk(
-        #     data,
-        #     labels,
-        #     data_long,  # todo: change to test data
-        #     "Bayes risque #1",
-        #     extent,  # todo: change to test extent
-        #     data_long,  # todo: change to test data
-        #     labels,  #   todo: change to test labels
-        # )
+        data_display_frontiers = data_long_train
 
-        #  KNN
+        score, error_indexes, predictions_test = classifiers.full_ppv(
+            best_n_neighbors,
+            cluster_centers,
+            cluster_labels,
+            data_display_frontiers,
+            f"{best_n_neighbors}-PPV sur le {best_n_clusters}-moy",
+            None,
+            data_long_test,
+            labels_test,
+        )
 
-        # n_clusters = 9  # 9
-        # n_neighbors = 4  # 4
+        # print("score", score)
+        # print("error_indexes", error_indexes)
+        # print("predictions_test", predictions_test.shape)
 
-        # cluster_centers, cluster_labels = classifiers.full_kmean(
-        #     n_clusters,
-        #     fake_data,
-        #     fake_labels,
-        #     "Représentants des 1-moy",
-        #     fake_extent,
-        # )
+        # # display wrong classified images on graph
+        # plt.figure()
+        # for i, test_index in enumerate(error_indexes):
+        #     plt.subplot(len(error_indexes), 1, i + 1)
+        #     initial_index = test_index + int(len(data_long) * 0.8)
+        #     # print("parameters for image")
+        #     # print(data_long[initial_index])
+        #     # print(data_long_test[test_index])
+        #     # print(labels[initial_index])
+        #     # print(labels_test[test_index])
+        #     # print(predictions_test[test_index].item())
 
-        # print("cluster_centers", cluster_centers)
-        # print("cluster_labels", cluster_labels)
+        #     true_label_index = labels[initial_index]
+        #     true_label_string = invert_class_list[true_label_index]
+        #     predicted_label_index = predictions_test[test_index].item()
+        #     predicted_label_string = invert_class_list[predicted_label_index]
 
-        # classifiers.full_ppv(
-        #     n_neighbors,
-        #     cluster_centers,
-        #     cluster_labels,
-        #     fake_data_long,
-        #     "1-PPV sur le 1-moy",
-        #     fake_extent,
-        #     fake_data_long,
-        #     fake_labels,
-        # )
+        #     plt.imshow(self.images[initial_index])
+        #     plt.gca().set_title(
+        #         f"predicted {true_label_string} instead of {predicted_label_string}",
+        #         fontsize=8,
+        #     )
+        #     plt.show()
 
-        # cluster_centers, cluster_labels = classifiers.full_kmean(
-        #     n_clusters,
-        #     data,
-        #     labels,
-        #     "Représentants des 1-moy",
-        #     extent,
-        #     data_long=data_long,
-        # )
+    def classify_images_nn(self):
 
-        # print("cluster_centers", cluster_centers)
-        # print("cluster_labels", cluster_labels)
-
-        # classifiers.full_ppv(
-        #     n_neighbors,
-        #     cluster_centers,
-        #     cluster_labels,
-        #     data_long,
-        #     f"{n_neighbors}-PPV sur le {n_clusters}-moy",
-        #     extent,
-        #     data_long,
-        #     labels,
-        # )
-
-        ## NN
+        [
+            data_train,
+            data_test,
+            labels_train,
+            labels_test,
+            data_long_train,
+            data_long_test,
+        ] = self.get_training_test_data(perc_train=0.95)
 
         n_hidden_layers = 2  # car c'est suffisant dans la plupart des cas selon la littérature (notes de cours)
-        n_neurons = 25  # car on veut être plus gros que le nombre de features en input, mais pas trop pour ne pas sur-apprendre
+        n_neurons = 16  # car on veut être plus gros que le nombre de features en input, mais pas trop pour ne pas sur-apprendre
         learning_rate = 0.01  # standard, à vérifier avec la courbe d'apprentissage
         nb_epochs = 1000  # beaucoup d'époques, mais avec un stop early
         activation_function = "tanh"  # parce que le réseau n'a pas beaucoup de couches cachées et que la fonction tanh est plus efficace que la fonction sigmoïde
-        loss_function = "binary_crossentropy"  # parce que c'est une classification binaire pour les différentes classes
-
-        n_hidden_layers = 3
-        n_neurons = 5
+        loss_function = "categorical_crossentropy"  # parce que c'est une classification binaire pour les différentes classes
 
         classifiers.full_nn(
             n_hidden_layers,
             n_neurons,
-            data_long,
-            labels,
-            data_long,
+            data_long_train,
+            labels_train,
+            data_long_train,
             f"NN {n_hidden_layers} layer(s) caché(s), {n_neurons} neurones par couche",
-            extent,
-            data_long,
-            labels,
+            None,
+            data_long_test,
+            labels_test,
             n_epochs=1000,
         )

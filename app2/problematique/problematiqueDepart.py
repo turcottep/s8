@@ -25,11 +25,13 @@ def main():
     # ImageCollection.get_all_noise_levels(im_list)
     # ImageCollection.get_color_values(im_list, 255, 0, 0)
 
-    # image_collection.check_discrimination()
+    image_collection.check_discrimination()
 
     # image_collection.test_square()
 
-    image_collection.classify_images()
+    # image_collection.classify_images_bayes()
+    # image_collection.classify_images_knn()
+    # image_collection.classify_images_nn()
 
     plt.show()
 
